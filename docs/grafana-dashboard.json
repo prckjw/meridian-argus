@@ -1,0 +1,75 @@
+{
+  "title": "MeridianArgus \u2014 LLM Cost & Observability",
+  "uid": "meridian-argus-overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Calls per minute by provider/model",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(meridian_argus_calls_total[1m])) by (provider, model)",
+          "legendFormat": "{{provider}}/{{model}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Error rate by provider/model",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(meridian_argus_calls_total{success=\"false\"}[5m])) by (provider, model) / sum(rate(meridian_argus_calls_total[5m])) by (provider, model)",
+          "legendFormat": "{{provider}}/{{model}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Estimated spend (USD/hour) by provider/model",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(meridian_argus_cost_usd_total[1h])) by (provider, model) * 3600",
+          "legendFormat": "{{provider}}/{{model}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "p95 latency by provider/model",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(meridian_argus_latency_seconds_bucket[5m])) by (le, provider, model))",
+          "legendFormat": "{{provider}}/{{model}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Token throughput (input vs output)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(meridian_argus_tokens_input_total[5m])) by (provider, model)",
+          "legendFormat": "{{provider}}/{{model}} input"
+        },
+        {
+          "expr": "sum(rate(meridian_argus_tokens_output_total[5m])) by (provider, model)",
+          "legendFormat": "{{provider}}/{{model}} output"
+        }
+      ]
+    }
+  ]
+}

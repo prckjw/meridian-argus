@@ -1,0 +1,14 @@
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health
+
+meridian-argus:
+  enabled: true
+  metrics:
+    micrometer:
+      enabled: true

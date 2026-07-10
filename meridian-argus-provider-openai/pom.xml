@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.prckjw.meridianargus</groupId>
+        <artifactId>meridian-argus-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>meridian-argus-provider-openai</artifactId>
+    <name>MeridianArgus :: Provider :: OpenAI</name>
+    <description>Adapter that wraps calls made through the official OpenAI Java SDK and publishes LLMCallRecords.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.prckjw.meridianargus</groupId>
+            <artifactId>meridian-argus-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
