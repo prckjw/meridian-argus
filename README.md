@@ -2,6 +2,8 @@
 
 **Unified observability and cost governance for multi-provider LLM calls in Java.**
 
+English | [简体中文](README.zh-CN.md)
+
 One consistent view of token usage, latency, error rate, and estimated cost — across Azure OpenAI, OpenAI, AWS Bedrock, Google Vertex AI, and Anthropic — without wiring up a separate dashboard for each provider your team happens to use.
 
 [![CI](https://github.com/prckjw/meridian-argus/actions/workflows/ci.yml/badge.svg)](https://github.com/prckjw/meridian-argus/actions/workflows/ci.yml)
