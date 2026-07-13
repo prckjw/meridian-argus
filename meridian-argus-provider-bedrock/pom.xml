@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.prckjw.meridianargus</groupId>
+        <artifactId>meridian-argus-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>meridian-argus-provider-bedrock</artifactId>
+    <packaging>jar</packaging>
+    <name>MeridianArgus :: Provider :: AWS Bedrock</name>
+    <description>
+        Adapter that wraps calls made through the AWS SDK for Java v2
+        Bedrock Runtime client (software.amazon.awssdk:bedrockruntime) so
+        every InvokeModel / Converse call is observed and reported through
+        the MeridianArgus interceptor pipeline.
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.prckjw.meridianargus</groupId>
+            <artifactId>meridian-argus-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+    </dependencies>
+</project>

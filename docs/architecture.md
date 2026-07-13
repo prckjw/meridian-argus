@@ -38,7 +38,7 @@ The trade-off is that integration is one extra lambda instead of being fully aut
 
 ## Roadmap
 
-- **v0.2**: Bedrock, Vertex AI, and Anthropic adapters
+- ~~**v0.2**: Bedrock, Vertex AI, and Anthropic adapters~~ done — shipped in `meridian-argus-provider-bedrock`, `meridian-argus-provider-vertex`, `meridian-argus-provider-anthropic`
 - **v0.2**: Local SQLite exporter (`LocalStorageExporter`) for teams that don't run Prometheus
 - **v0.3**: Rolling-window alert evaluator built on `AlertThreshold`, with a Slack/Teams webhook notifier
 - **v0.3**: Optional lightweight web dashboard (`meridian-argus-web-dashboard`) for teams that want a UI without standing up Grafana

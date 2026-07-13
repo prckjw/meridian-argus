@@ -74,10 +74,11 @@ See [`meridian-argus-examples/spring-boot-openai-demo`](meridian-argus-examples/
                        │
         wraps a call with a provider adapter
                        │
-     ┌─────────────────┼─────────────────┬──────────────┐
-OpenAICallWrapper  AzureOpenAICallWrapper  (Bedrock)  (Vertex/Anthropic)
-     │                  │                    │             │
-     └──────────────────┴────────────────────┴─────────────┘
+     ┌────────────┬────────────┬────────────┬────────────┬────────────┐
+ OpenAICall   AzureOpenAI   Bedrock      VertexAI    Anthropic
+ Wrapper      CallWrapper   CallWrapper  CallWrapper  CallWrapper
+     │            │            │            │            │
+     └────────────┴────────────┴────────────┴────────────┘
                        │  publishes LLMCallRecord
                        ▼
             LLMObservabilityRegistry (fan-out)
@@ -97,11 +98,11 @@ Full design notes: [`docs/architecture.md`](docs/architecture.md).
 |---|---|---|
 | OpenAI | ✅ Available | `meridian-argus-provider-openai` |
 | Azure OpenAI | ✅ Available | `meridian-argus-provider-azure-openai` |
-| AWS Bedrock | 🚧 Planned (v0.2) | `meridian-argus-provider-bedrock` |
-| Google Vertex AI | 🚧 Planned (v0.2) | `meridian-argus-provider-vertex` |
-| Anthropic | 🚧 Planned (v0.2) | `meridian-argus-provider-anthropic` |
+| AWS Bedrock | ✅ Available | `meridian-argus-provider-bedrock` |
+| Google Vertex AI | ✅ Available | `meridian-argus-provider-vertex` |
+| Anthropic | ✅ Available | `meridian-argus-provider-anthropic` |
 
-Pricing entries for all five already exist in [`pricing-config/default-pricing.yaml`](pricing-config/default-pricing.yaml) so the cost engine is ready as each adapter lands.
+All five have matching entries in [`pricing-config/default-pricing.yaml`](pricing-config/default-pricing.yaml), so cost estimates work out of the box for the default model list. Bedrock and Anthropic both serve Claude models — use whichever adapter matches how you're actually accessing the model (direct API vs. hosted on AWS), since pricing differs between the two.
 
 ## Modules
 
@@ -122,7 +123,7 @@ Pricing entries for all five already exist in [`pricing-config/default-pricing.y
 
 ## Status
 
-Early (`0.1.0-SNAPSHOT`). Core pipeline, OpenAI/Azure OpenAI adapters, and Micrometer export are implemented and tested. Bedrock/Vertex/Anthropic adapters, the local SQLite exporter, and the optional web dashboard are on the roadmap — see [`docs/architecture.md`](docs/architecture.md) for the full plan. Issues and PRs welcome, especially pricing-table updates.
+Early (`0.1.0-SNAPSHOT`). Core pipeline, all five provider adapters (OpenAI, Azure OpenAI, Bedrock, Vertex AI, Anthropic), and Micrometer export are implemented. The local SQLite exporter and the optional web dashboard are on the roadmap — see [`docs/architecture.md`](docs/architecture.md) for the full plan. None of the SDK-specific adapter code has been run against live provider SDKs yet (no network access in the environment this was built in) — if you hit a compile mismatch against the SDK version you use, please open an issue or PR. Issues and PRs welcome, especially pricing-table updates.
 
 ## Contributing
 

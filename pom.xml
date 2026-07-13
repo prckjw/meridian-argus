@@ -27,6 +27,9 @@
         <module>meridian-argus-core</module>
         <module>meridian-argus-provider-openai</module>
         <module>meridian-argus-provider-azure-openai</module>
+        <module>meridian-argus-provider-bedrock</module>
+        <module>meridian-argus-provider-vertex</module>
+        <module>meridian-argus-provider-anthropic</module>
         <module>meridian-argus-metrics-micrometer</module>
         <module>meridian-argus-spring-boot-starter</module>
         <module>meridian-argus-examples/spring-boot-openai-demo</module>
@@ -95,6 +98,21 @@
             <dependency>
                 <groupId>com.prckjw.meridianargus</groupId>
                 <artifactId>meridian-argus-provider-azure-openai</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-provider-bedrock</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-provider-vertex</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-provider-anthropic</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
