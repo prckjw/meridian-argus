@@ -26,7 +26,7 @@ Please include: MeridianArgus version, the provider/adapter involved, a minimal 
 mvn -B verify
 ```
 
-Requires JDK 17+. The build is a standard multi-module Maven project — no special tooling needed.
+Requires JDK 21+. The build is a standard multi-module Maven project — no special tooling needed.
 
 ## Code style
 

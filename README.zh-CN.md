@@ -8,7 +8,7 @@
 
 [![CI](https://github.com/prckjw/meridian-argus/actions/workflows/ci.yml/badge.svg)](https://github.com/prckjw/meridian-argus/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)](https://openjdk.org/)
+[![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/)
 
 ---
 
