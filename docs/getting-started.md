@@ -75,6 +75,26 @@ Same shape as [`pricing-config/default-pricing.yaml`](../pricing-config/default-
 
 ## Troubleshooting
 
+**`Could not find artifact com.prckjw.meridianargus:...:jar:0.1.0-SNAPSHOT` / `Could not resolve dependencies` when running the demo module.**
+This means you ran Maven from *inside* `meridian-argus-examples/spring-boot-openai-demo` (or opened just that folder as a standalone project in your IDE), instead of from the repository root. The demo depends on sibling modules (`meridian-argus-spring-boot-starter`, `meridian-argus-provider-openai`, etc.) that only exist as source until Maven builds them — they're `0.1.0-SNAPSHOT` and were never published anywhere, so Maven Central can never resolve them either.
+
+Fix — run from the **repository root**, letting `-am` (also-make) build the sibling modules in the same reactor session:
+
+```bash
+cd meridian-argus   # repo root, not the demo subfolder
+mvn -pl meridian-argus-examples/spring-boot-openai-demo -am spring-boot:run
+```
+
+Or install everything to your local `~/.m2` once, after which any submodule can be run standalone:
+
+```bash
+mvn install -DskipTests
+cd meridian-argus-examples/spring-boot-openai-demo
+mvn spring-boot:run   # now resolves fine
+```
+
+Same applies in an IDE: import the **root** `pom.xml` as the project, not the demo subfolder in isolation, so the IDE's dependency resolver sees all sibling modules.
+
 **No `meridian_argus.*` metrics show up.**
 Check that `micrometer-registry-prometheus` (or another Micrometer registry) is on the classpath — the exporter bean only activates if a `MeterRegistry` bean exists (`@ConditionalOnClass`/`@ConditionalOnMissingBean` in `MeridianArgusAutoConfiguration`).
 

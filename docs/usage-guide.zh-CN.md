@@ -302,6 +302,18 @@ public class MyCustomExporter extends AbstractMetricsExporter {
 
 ## 常见问题
 
+**Q: 跑 demo 模块时报 `Could not find artifact com.prckjw.meridianargus:...:jar:0.1.0-SNAPSHOT` / `Could not resolve dependencies`？**
+A: 这是最常见的多模块 Maven 坑——说明你是在 `meridian-argus-examples/spring-boot-openai-demo` 子目录里单独执行的 `mvn`（或者 IDE 里只把这个子文件夹当独立项目打开了），而不是从仓库根目录发起构建。demo 模块依赖的 `meridian-argus-spring-boot-starter`、`meridian-argus-provider-openai` 这些兄弟模块都是 `0.1.0-SNAPSHOT`，只以源码形式存在，从没发布到任何仓库，Maven Central 自然也解析不出来。
+
+正确做法是从**仓库根目录**发起构建，用 `-am`（also-make）让 Maven 在同一个 reactor 里把依赖的兄弟模块一起编译：
+
+```bash
+cd meridian-argus   # 根目录，不是 demo 子目录
+mvn -pl meridian-argus-examples/spring-boot-openai-demo -am spring-boot:run
+```
+
+或者先在根目录跑一次 `mvn install -DskipTests` 把全部模块装进本地 `~/.m2` 仓库，之后就可以在任意子模块目录里单独跑 `mvn spring-boot:run` 了。IDE 场景同理：要把**根目录**的 `pom.xml` 作为整个项目导入，而不是单独打开 demo 子文件夹。
+
 **Q: 为什么 `/actuator/prometheus` 里看不到 `meridian_argus.*` 指标？**
 依次检查：
 1. classpath 上是否有 `micrometer-registry-prometheus`

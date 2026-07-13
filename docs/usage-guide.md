@@ -301,6 +301,18 @@ Then register it with the registry — in Spring, define a `@Bean` that injects 
 
 ## FAQ / Troubleshooting
 
+**Q: I get `Could not find artifact com.prckjw.meridianargus:...:jar:0.1.0-SNAPSHOT` / `Could not resolve dependencies` when running the demo module.**
+A: This is the classic multi-module Maven gotcha — it means you ran `mvn` from *inside* `meridian-argus-examples/spring-boot-openai-demo` (or opened just that folder as a standalone project in your IDE), instead of from the repository root. The demo depends on sibling modules (`meridian-argus-spring-boot-starter`, `meridian-argus-provider-openai`, etc.) that are `0.1.0-SNAPSHOT` and exist only as source — they've never been published anywhere, so Maven Central can never resolve them either.
+
+Run from the **repository root** instead, letting `-am` (also-make) build the sibling modules in the same reactor session:
+
+```bash
+cd meridian-argus   # repo root, not the demo subfolder
+mvn -pl meridian-argus-examples/spring-boot-openai-demo -am spring-boot:run
+```
+
+Or install everything to your local `~/.m2` once (`mvn install -DskipTests` from the root), after which any submodule can be run standalone. Same applies in an IDE: import the **root** `pom.xml` as the project, not the demo subfolder in isolation.
+
 **Q: Why don't I see `meridian_argus.*` metrics at `/actuator/prometheus`?**
 Check, in order:
 1. Is `micrometer-registry-prometheus` on the classpath?
