@@ -92,7 +92,7 @@ PricingEngine   MicrometerMetricsExporter   (your own exporter)
  (USD estimate)   Prometheus / Grafana
 ```
 
-Full design notes: [`docs/architecture.md`](docs/architecture.md).
+Full design notes: [`docs/architecture.md`](docs/architecture.md). Full usage guide and configuration reference: [`docs/usage-guide.md`](docs/usage-guide.md).
 
 ## Provider support matrix
 

@@ -92,7 +92,7 @@ PricingEngine   MicrometerMetricsExporter   （你自己的 exporter）
  （美元预估）      Prometheus / Grafana
 ```
 
-完整设计说明见 [`docs/architecture.md`](docs/architecture.md)（英文）。
+完整设计说明见 [`docs/architecture.md`](docs/architecture.md)（英文）。完整使用说明及参数配置参考见 [`docs/usage-guide.zh-CN.md`](docs/usage-guide.zh-CN.md)。
 
 ## Provider 支持矩阵
 
