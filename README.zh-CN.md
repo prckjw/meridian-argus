@@ -125,7 +125,7 @@ PricingEngine   MicrometerMetricsExporter   （你自己的 exporter）
 
 ## 项目状态
 
-早期阶段（`0.1.0-SNAPSHOT`）。核心流程、全部五个 Provider 适配器（OpenAI、Azure OpenAI、Bedrock、Vertex AI、Anthropic）以及 Micrometer 导出均已实现。本地 SQLite 导出器和可选的 Web Dashboard 在路线图上——完整计划见 [`docs/architecture.md`](docs/architecture.md)（英文）。目前这些针对具体 SDK 的适配器代码还没有在真实网络环境下跑通编译验证（开发环境无法访问 Maven Central）——如果你在使用的 SDK 版本上遇到编译不匹配的问题，欢迎提 Issue 或 PR。也非常欢迎大家帮忙维护价格表。
+早期阶段（`0.1.0-SNAPSHOT`）。核心流程、全部五个 Provider 适配器（OpenAI、Azure OpenAI、Bedrock、Vertex AI、Anthropic）以及 Micrometer 导出均已实现。本地 SQLite 导出器和可选的 Web Dashboard 在路线图上——完整计划见 [`docs/architecture.md`](docs/architecture.md)（英文），下一轮具体要做什么见 [`docs/iteration-plan.zh-CN.md`](docs/iteration-plan.zh-CN.md)。目前这些针对具体 SDK 的适配器代码还没有在真实网络环境下跑通编译验证（开发环境无法访问 Maven Central）——如果你在使用的 SDK 版本上遇到编译不匹配的问题，欢迎提 Issue 或 PR。也非常欢迎大家帮忙维护价格表。
 
 ## 参与贡献
 
