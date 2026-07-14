@@ -98,6 +98,12 @@
                 <artifactId>meridian-argus-metrics-micrometer</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

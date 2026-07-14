@@ -3,9 +3,6 @@ package com.prckjw.meridianargus.starter;
 import com.prckjw.meridianargus.core.interceptor.LLMObservabilityRegistry;
 import com.prckjw.meridianargus.core.pricing.PricingConfig;
 import com.prckjw.meridianargus.core.pricing.PricingEngine;
-import com.prckjw.meridianargus.metrics.micrometer.MicrometerMetricsExporter;
-import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -24,10 +21,9 @@ import java.io.InputStream;
  * <p>
  * Beans created:
  * <ul>
- *   <li>{@link LLMObservabilityRegistry} — always, if enabled</li>
- *   <li>{@link PricingEngine} — loads the bundled or user-supplied pricing YAML</li>
- *   <li>{@link MicrometerMetricsExporter} — only if Micrometer is on the classpath
- *       and a {@link MeterRegistry} bean exists (auto-registered as an interceptor)</li>
+ *   <li>{@link LLMObservabilityRegistry} - always, if enabled</li>
+ *   <li>{@link PricingConfig} - loads the bundled or user-supplied pricing YAML</li>
+ *   <li>{@link PricingEngine} - estimates costs using the active pricing config</li>
  * </ul>
  */
 @Configuration
@@ -43,22 +39,14 @@ public class MeridianArgusAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public PricingEngine pricingEngine(MeridianArgusProperties properties) {
-        PricingConfig config = loadPricingConfig(properties);
-        return new PricingEngine(config);
+    public PricingConfig pricingConfig(MeridianArgusProperties properties) {
+        return loadPricingConfig(properties);
     }
 
     @Bean
-    @ConditionalOnClass(MeterRegistry.class)
-    @ConditionalOnProperty(prefix = "meridian-argus.metrics.micrometer", name = "enabled", havingValue = "true", matchIfMissing = true)
     @ConditionalOnMissingBean
-    public MicrometerMetricsExporter micrometerMetricsExporter(
-            MeterRegistry meterRegistry,
-            PricingEngine pricingEngine,
-            LLMObservabilityRegistry registry) {
-        MicrometerMetricsExporter exporter = new MicrometerMetricsExporter(meterRegistry, pricingEngine);
-        registry.register(exporter);
-        return exporter;
+    public PricingEngine pricingEngine(PricingConfig pricingConfig) {
+        return new PricingEngine(pricingConfig);
     }
 
     private PricingConfig loadPricingConfig(MeridianArgusProperties properties) {

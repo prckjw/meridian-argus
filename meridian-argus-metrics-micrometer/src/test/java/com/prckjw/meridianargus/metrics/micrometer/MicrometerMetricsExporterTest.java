@@ -9,6 +9,8 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.prometheusmetrics.PrometheusConfig;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -113,7 +115,7 @@ class MicrometerMetricsExporterTest {
 
     @Test
     void latencyPublishesPercentileHistogramForQuantileQueries() {
-        MeterRegistry meterRegistry = new SimpleMeterRegistry();
+        PrometheusMeterRegistry meterRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         MicrometerMetricsExporter exporter = new MicrometerMetricsExporter(meterRegistry, pricingEngine());
 
         LLMCallRecord record = LLMCallRecord.builder()
@@ -123,13 +125,8 @@ class MicrometerMetricsExporterTest {
 
         exporter.onCallCompleted(record);
 
-        Timer timer = meterRegistry.find("meridian_argus.latency")
-                .tag("provider", "openai").tag("model", "gpt-4o").timer();
-
-        // A non-empty histogramCounts array is how Micrometer signals that
-        // publishPercentileHistogram() actually took effect -- this is what
-        // makes histogram_quantile() queries in the Grafana dashboard work.
-        assertTrue(timer.takeSnapshot().histogramCounts().length > 0);
+        String scrape = meterRegistry.scrape();
+        assertTrue(scrape.contains("meridian_argus_latency_seconds_bucket"));
     }
 
     @Test
