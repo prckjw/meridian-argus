@@ -10,14 +10,17 @@ import java.lang.annotation.Target;
 /**
  * Enables MeridianArgus auto-configuration: an {@code LLMObservabilityRegistry}
  * bean, the pricing engine loaded from the bundled or user-supplied pricing
- * table, and (if micrometer-core is on the classpath) a
- * {@code MicrometerMetricsExporter} wired to the application's
- * {@code MeterRegistry}.
+ * table, and (if micrometer-core AND meridian-argus-metrics-micrometer are
+ * both on the classpath) a {@code MicrometerMetricsExporter} wired to the
+ * application's {@code MeterRegistry}.
  * <p>
  * This annotation is a convenience marker on top of Spring Boot's regular
- * auto-configuration mechanism ({@code MeridianArgusAutoConfiguration} is
- * also registered automatically via
- * {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports}).
+ * auto-configuration mechanism ({@code MeridianArgusAutoConfiguration} and
+ * {@code MeridianArgusMicrometerAutoConfiguration} are also registered
+ * automatically via
+ * {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports},
+ * so this explicit {@code @Import} is redundant in practice — it exists
+ * purely so the annotation's own declaration matches what it documents).
  * Adding it explicitly is optional but documents intent clearly on the
  * application's entry point:
  *
@@ -33,6 +36,6 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Import(MeridianArgusAutoConfiguration.class)
+@Import({MeridianArgusAutoConfiguration.class, MeridianArgusMicrometerAutoConfiguration.class})
 public @interface EnableLLMObservability {
 }

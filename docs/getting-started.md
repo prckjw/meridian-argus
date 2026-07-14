@@ -5,7 +5,7 @@
 ```bash
 git clone https://github.com/prckjw/meridian-argus.git
 cd meridian-argus
-mvn -pl meridian-argus-examples/spring-boot-openai-demo -am spring-boot:run
+mvn -pl meridian-argus-examples/spring-boot-openai-demo -am org.springframework.boot:spring-boot-maven-plugin:run
 ```
 
 Then in another terminal:
@@ -82,7 +82,7 @@ Fix — run from the **repository root**, letting `-am` (also-make) build the si
 
 ```bash
 cd meridian-argus   # repo root, not the demo subfolder
-mvn -pl meridian-argus-examples/spring-boot-openai-demo -am spring-boot:run
+mvn -pl meridian-argus-examples/spring-boot-openai-demo -am org.springframework.boot:spring-boot-maven-plugin:run
 ```
 
 Or install everything to your local `~/.m2` once, after which any submodule can be run standalone:
@@ -90,7 +90,7 @@ Or install everything to your local `~/.m2` once, after which any submodule can 
 ```bash
 mvn install -DskipTests
 cd meridian-argus-examples/spring-boot-openai-demo
-mvn spring-boot:run   # now resolves fine
+mvn org.springframework.boot:spring-boot-maven-plugin:run   # now resolves fine
 ```
 
 Same applies in an IDE: import the **root** `pom.xml` as the project, not the demo subfolder in isolation, so the IDE's dependency resolver sees all sibling modules.

@@ -57,7 +57,7 @@ class MeridianArgusAutoConfigurationTest {
     @Test
     void micrometerExporterIsSkippedWhenNoMeterRegistryBeanExists() {
         // No MeterRegistry in the context at all -- the nested
-        // MicrometerExporterConfiguration should simply not activate.
+        // MeridianArgusMicrometerAutoConfiguration should simply not activate.
         contextRunner.run(context -> assertThat(context).doesNotHaveBean(MicrometerMetricsExporter.class));
     }
 

@@ -309,10 +309,10 @@ A: 这是最常见的多模块 Maven 坑——说明你是在 `meridian-argus-ex
 
 ```bash
 cd meridian-argus   # 根目录，不是 demo 子目录
-mvn -pl meridian-argus-examples/spring-boot-openai-demo -am spring-boot:run
+mvn -pl meridian-argus-examples/spring-boot-openai-demo -am org.springframework.boot:spring-boot-maven-plugin:run
 ```
 
-或者先在根目录跑一次 `mvn install -DskipTests` 把全部模块装进本地 `~/.m2` 仓库，之后就可以在任意子模块目录里单独跑 `mvn spring-boot:run` 了。IDE 场景同理：要把**根目录**的 `pom.xml` 作为整个项目导入，而不是单独打开 demo 子文件夹。
+或者先在根目录跑一次 `mvn install -DskipTests` 把全部模块装进本地 `~/.m2` 仓库，之后就可以在任意子模块目录里单独跑 `mvn org.springframework.boot:spring-boot-maven-plugin:run` 了。IDE 场景同理：要把**根目录**的 `pom.xml` 作为整个项目导入，而不是单独打开 demo 子文件夹。
 
 **Q: 为什么 `/actuator/prometheus` 里看不到 `meridian_argus.*` 指标？**
 依次检查：
