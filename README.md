@@ -113,6 +113,7 @@ All five have matching entries in [`pricing-config/default-pricing.yaml`](pricin
 | `meridian-argus-core` | Provider-agnostic model, interceptor SPI, pricing engine — no framework dependency |
 | `meridian-argus-provider-*` | Thin wrappers around each provider's official SDK |
 | `meridian-argus-metrics-micrometer` | Exports records as Micrometer meters |
+| `meridian-argus-metrics-sqlite` | Zero-infrastructure local storage: writes records to a single-file SQLite database, with a read-side query helper for "spend over the last N hours" |
 | `meridian-argus-spring-boot-starter` | Auto-configuration wiring everything above into Spring beans |
 | `meridian-argus-examples/*` | Runnable demo apps |
 

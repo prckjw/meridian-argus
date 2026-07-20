@@ -173,6 +173,9 @@ meridian-argus:
   metrics:
     micrometer:
       enabled: true                                # Micrometer 导出开关
+    sqlite:
+      enabled: false                                # SQLite 导出开关（默认关闭，需显式开启）
+      path: meridian-argus.db                        # SQLite 数据库文件路径
 ```
 
 | 参数 | 类型 | 默认值 | 说明 |
@@ -180,6 +183,8 @@ meridian-argus:
 | `meridian-argus.enabled` | boolean | `true` | 总开关。设为 `false` 时，Starter 不会创建任何 Bean（包括 registry），相当于完全禁用可观测性 |
 | `meridian-argus.pricing-config-path` | string | 空（使用内置价格表） | 自定义价格表路径，支持 Spring 的 `Resource` 前缀写法：`classpath:xxx.yaml`、`file:/path/to/xxx.yaml`。不配置时使用内置的 `pricing-config/default-pricing.yaml`（打包在 `meridian-argus-core` 的 jar 里） |
 | `meridian-argus.metrics.micrometer.enabled` | boolean | `true` | 是否自动注册 `MicrometerMetricsExporter`。需要同时满足：classpath 上有 `micrometer-core` 和本项目的 `meridian-argus-metrics-micrometer` 模块、容器里存在 `MeterRegistry` Bean（通常由 `spring-boot-starter-actuator` 提供）。设为 `false` 可以在保留依赖的情况下临时关闭这一路导出，比如本地开发时不想产生指标噪音 |
+| `meridian-argus.metrics.sqlite.enabled` | boolean | **`false`** | 是否自动注册 `LocalStorageExporter`。跟 Micrometer 那项不一样，**默认关闭**——写本地文件是需要主动选择的副作用，不会因为 `meridian-argus-metrics-sqlite` 恰好在 classpath 上就自动生效，必须显式设为 `true` |
+| `meridian-argus.metrics.sqlite.path` | string | `meridian-argus.db` | SQLite 数据库文件路径，相对或绝对路径均可，父目录不存在会自动创建 |
 
 ### Bean 装配逻辑一览
 
@@ -189,6 +194,7 @@ meridian-argus:
 | `PricingConfig` | 同上 | 优先读取 `pricing-config-path`，未配置则用内置价格表 |
 | `PricingEngine` | 同上 | 包装 `PricingConfig`，提供成本计算能力 |
 | `MicrometerMetricsExporter` | `meridian-argus.enabled=true` **且** `meridian-argus.metrics.micrometer.enabled=true`（默认）**且** classpath 上有 `MeterRegistry` 和 `MicrometerMetricsExporter` 类 | 会自动 `register` 到 `LLMObservabilityRegistry` |
+| `LocalStorageExporter` | `meridian-argus.enabled=true` **且** `meridian-argus.metrics.sqlite.enabled=true`（**默认 false，需要显式开启**）**且** classpath 上有 `LocalStorageExporter` 和 `org.sqlite.JDBC` 类 | 会自动 `register` 到 `LLMObservabilityRegistry`；应用关闭时自动调用 `close()` |
 
 以上所有 Bean 都用 `@ConditionalOnMissingBean` 修饰——如果你自己定义了同类型的 Bean（比如想自定义 `PricingEngine` 的构造方式），会优先使用你自己的定义，Starter 不会覆盖。
 
@@ -269,6 +275,80 @@ histogram_quantile(0.95, sum(rate(meridian_argus_latency_seconds_bucket[5m])) by
 ## Grafana Dashboard
 
 项目自带一份现成的 Dashboard JSON：[`docs/grafana-dashboard.json`](grafana-dashboard.json)，包含调用量、错误率、预估花费、p95 延迟、Token 吞吐量五个面板，直接在 Grafana 里 Import 即可使用（需要先把 Prometheus 配置成对应的数据源）。
+
+## 本地 SQLite Exporter
+
+不是所有团队都跑 Prometheus。`meridian-argus-metrics-sqlite` 提供一个零基础设施的替代方案：把每条调用记录 + 计价结果直接写进一个单文件 SQLite 数据库，不需要额外起服务。
+
+### 启用方式（Spring Boot）
+
+引入模块：
+
+```xml
+<dependency>
+    <groupId>com.prckjw.meridianargus</groupId>
+    <artifactId>meridian-argus-metrics-sqlite</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+在配置里显式开启（**这个跟 Micrometer 不一样，默认是关闭的**——往磁盘写文件是一个需要主动选择的副作用，不应该因为依赖恰好在 classpath 上就自动生效）：
+
+```yaml
+meridian-argus:
+  metrics:
+    sqlite:
+      enabled: true
+      path: meridian-argus.db   # 相对或绝对路径都可以，父目录会自动创建，默认就是这个文件名
+```
+
+装配完成后，`LocalStorageExporter` 会作为 Bean 自动注册到 `LLMObservabilityRegistry`，应用关闭时也会自动调用它的 `close()` 方法（Spring 的 `destroyMethod` 机制），不需要手动管理连接生命周期。
+
+它和 Micrometer Exporter 可以同时启用，互不冲突（`LLMObservabilityRegistry` 本来就是往所有注册的 Exporter 扇出）。
+
+### 数据表结构
+
+```sql
+CREATE TABLE llm_calls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    started_at TEXT NOT NULL,      -- ISO-8601，Instant#toString()
+    latency_ms INTEGER NOT NULL,
+    success INTEGER NOT NULL,       -- 0/1
+    error_type TEXT,
+    caller_id TEXT,
+    input_tokens INTEGER NOT NULL,
+    output_tokens INTEGER NOT NULL,
+    price_known INTEGER NOT NULL,   -- 0/1，价格表里查不到时为 0
+    input_cost_usd TEXT,
+    output_cost_usd TEXT,
+    total_cost_usd TEXT
+);
+```
+
+价格未知时 `total_cost_usd` 等字段是 `NULL`，不是 `0`——跟项目里其他地方"未知不等于零"的约定保持一致。可以直接用 `sqlite3` 命令行工具或者任何 SQLite 客户端打开这个文件查询。
+
+### 查询辅助类
+
+不想自己写 SQL 的话，`UsageQuery` 封装了几个常见问题：
+
+```java
+UsageQuery query = new UsageQuery(Path.of("meridian-argus.db"));
+
+// 按 provider/model 分组的调用量、错误数、token 用量、预估花费
+List<ProviderModelCostSummary> lastHour = query.costByProviderModel(Duration.ofHours(1));
+
+// 全部 provider/model 汇总的总花费
+BigDecimal totalLast24h = query.totalCost(Duration.ofHours(24));
+
+// 调用总数（含失败的）
+long callsLastWeek = query.callCount(Duration.ofDays(7));
+```
+
+`UsageQuery` 每次调用都会开一个短连接，定位是"偶尔查一下"的场景（比如定时报表、小工具），不是高频热路径查询；如果你需要更高频率的查询，建议直接拿 SQLite 文件自己管理连接池。
+
+它跟正在写入的 `LocalStorageExporter` 可以安全地同时使用——数据库开启时用了 `PRAGMA journal_mode=WAL`，读不会被写阻塞。
 
 ## 自定义 Exporter
 

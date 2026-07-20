@@ -171,6 +171,9 @@ meridian-argus:
   metrics:
     micrometer:
       enabled: true                                    # toggle the Micrometer exporter
+    sqlite:
+      enabled: false                                    # toggle the SQLite exporter (opt-in, see below)
+      path: meridian-argus.db                            # SQLite database file path
 ```
 
 | Property | Type | Default | Description |
@@ -178,6 +181,8 @@ meridian-argus:
 | `meridian-argus.enabled` | boolean | `true` | Master switch. When `false`, the starter creates no beans at all (including the registry) — observability is fully disabled |
 | `meridian-argus.pricing-config-path` | string | empty (bundled table) | Overrides the pricing table. Accepts Spring `Resource` prefixes: `classpath:xxx.yaml`, `file:/path/to/xxx.yaml`. When unset, the bundled `pricing-config/default-pricing.yaml` (shipped inside the `meridian-argus-core` jar) is used |
 | `meridian-argus.metrics.micrometer.enabled` | boolean | `true` | Whether to auto-register `MicrometerMetricsExporter`. Requires `micrometer-core`, this project's `meridian-argus-metrics-micrometer` module, and a `MeterRegistry` bean (typically from `spring-boot-starter-actuator`) all to be present. Set to `false` to disable this export path without removing the dependency — handy for local dev to reduce metric noise |
+| `meridian-argus.metrics.sqlite.enabled` | boolean | **`false`** | Whether to auto-register `LocalStorageExporter`. Unlike Micrometer, **opt-in by default** — writing to a local file is a deliberate side effect that shouldn't activate just because `meridian-argus-metrics-sqlite` happens to be on the classpath; you must set this to `true` explicitly |
+| `meridian-argus.metrics.sqlite.path` | string | `meridian-argus.db` | Path to the SQLite database file, relative or absolute. Parent directories are created automatically if missing |
 
 ### Bean wiring at a glance
 
@@ -187,6 +192,7 @@ meridian-argus:
 | `PricingConfig` | same | Loads from `pricing-config-path` if set, otherwise the bundled table |
 | `PricingEngine` | same | Wraps `PricingConfig`, provides cost calculation |
 | `MicrometerMetricsExporter` | `meridian-argus.enabled=true` **and** `meridian-argus.metrics.micrometer.enabled=true` (default) **and** `MeterRegistry` + `MicrometerMetricsExporter` classes present on classpath | Automatically `register`ed with `LLMObservabilityRegistry` |
+| `LocalStorageExporter` | `meridian-argus.enabled=true` **and** `meridian-argus.metrics.sqlite.enabled=true` (**default false, opt-in**) **and** `LocalStorageExporter` + `org.sqlite.JDBC` classes present on classpath | Automatically `register`ed with `LLMObservabilityRegistry`; `close()` is called automatically on application shutdown |
 
 Every bean above is `@ConditionalOnMissingBean` — define your own bean of the same type (e.g. a custom `PricingEngine`) and the starter backs off automatically.
 
@@ -268,6 +274,80 @@ histogram_quantile(0.95, sum(rate(meridian_argus_latency_seconds_bucket[5m])) by
 ## Grafana Dashboard
 
 A ready-made dashboard ships at [`docs/grafana-dashboard.json`](grafana-dashboard.json), with panels for call volume, error rate, estimated spend, p95 latency, and token throughput. Import it directly into Grafana (point it at your Prometheus data source).
+
+## Local SQLite Exporter
+
+Not every team runs Prometheus. `meridian-argus-metrics-sqlite` is a zero-infrastructure alternative: every call record and its computed cost is written straight to a single-file SQLite database, no server process required.
+
+### Enabling it (Spring Boot)
+
+Add the module:
+
+```xml
+<dependency>
+    <groupId>com.prckjw.meridianargus</groupId>
+    <artifactId>meridian-argus-metrics-sqlite</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+Turn it on explicitly (**unlike Micrometer, this is opt-in**  — writing to disk is a deliberate side effect that shouldn't activate just because the dependency happens to be on the classpath):
+
+```yaml
+meridian-argus:
+  metrics:
+    sqlite:
+      enabled: true
+      path: meridian-argus.db   # relative or absolute; parent dirs are created automatically; this is also the default filename
+```
+
+Once wired up, `LocalStorageExporter` is registered as a bean and automatically hooked into `LLMObservabilityRegistry`. Its `close()` method is called automatically on application shutdown via Spring's bean destroy-method mechanism — no manual connection lifecycle management needed.
+
+It can run alongside the Micrometer exporter with no conflict — `LLMObservabilityRegistry` already fans out to every registered exporter.
+
+### Schema
+
+```sql
+CREATE TABLE llm_calls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    started_at TEXT NOT NULL,      -- ISO-8601, Instant#toString()
+    latency_ms INTEGER NOT NULL,
+    success INTEGER NOT NULL,       -- 0/1
+    error_type TEXT,
+    caller_id TEXT,
+    input_tokens INTEGER NOT NULL,
+    output_tokens INTEGER NOT NULL,
+    price_known INTEGER NOT NULL,   -- 0/1, 0 when the model isn't in the pricing table
+    input_cost_usd TEXT,
+    output_cost_usd TEXT,
+    total_cost_usd TEXT
+);
+```
+
+Cost columns are `NULL`, not `0`, when the price is unknown — consistent with the "unknown isn't zero" convention used everywhere else in this project. Open the file directly with the `sqlite3` CLI or any SQLite client if you want to query it yourself.
+
+### Query helper
+
+If you don't want to write raw SQL, `UsageQuery` covers the common questions:
+
+```java
+UsageQuery query = new UsageQuery(Path.of("meridian-argus.db"));
+
+// Per-provider/model call count, error count, token usage, and estimated cost
+List<ProviderModelCostSummary> lastHour = query.costByProviderModel(Duration.ofHours(1));
+
+// Total cost across every provider/model
+BigDecimal totalLast24h = query.totalCost(Duration.ofHours(24));
+
+// Total call count (including failures)
+long callsLastWeek = query.callCount(Duration.ofDays(7));
+```
+
+`UsageQuery` opens a short-lived connection per call — it's meant for occasional questions (a scheduled report, a small CLI tool), not a high-frequency hot path. For higher query volume, manage your own connection pool against the SQLite file directly.
+
+It's safe to use concurrently with an active `LocalStorageExporter` writing to the same file — the database is opened with `PRAGMA journal_mode=WAL`, so reads aren't blocked by an in-flight write.
 
 ## Writing a Custom Exporter
 

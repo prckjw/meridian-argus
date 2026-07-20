@@ -113,6 +113,7 @@ PricingEngine   MicrometerMetricsExporter   （你自己的 exporter）
 | `meridian-argus-core` | 与具体服务商无关的模型定义、拦截器 SPI、计价引擎——不依赖任何框架 |
 | `meridian-argus-provider-*` | 各服务商官方 SDK 的薄封装层 |
 | `meridian-argus-metrics-micrometer` | 把记录导出为 Micrometer 指标 |
+| `meridian-argus-metrics-sqlite` | 零基础设施的本地存储：把记录写入单文件 SQLite 数据库，并提供"最近 N 小时花了多少钱"这类常见问题的查询辅助类 |
 | `meridian-argus-spring-boot-starter` | 自动装配，把上述所有组件接成 Spring Bean |
 | `meridian-argus-examples/*` | 可直接运行的示例应用 |
 

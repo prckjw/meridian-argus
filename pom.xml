@@ -31,6 +31,7 @@
         <module>meridian-argus-provider-vertex</module>
         <module>meridian-argus-provider-anthropic</module>
         <module>meridian-argus-metrics-micrometer</module>
+        <module>meridian-argus-metrics-sqlite</module>
         <module>meridian-argus-spring-boot-starter</module>
         <module>meridian-argus-examples/spring-boot-openai-demo</module>
     </modules>
@@ -96,6 +97,12 @@
             <dependency>
                 <groupId>com.prckjw.meridianargus</groupId>
                 <artifactId>meridian-argus-metrics-micrometer</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-metrics-sqlite</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

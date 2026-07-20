@@ -20,7 +20,7 @@ OpenAI, Azure OpenAI, Bedrock, Vertex AI, and Anthropic are all covered. If you'
 
 If your exporter lives in its own module with optional dependencies (the way `meridian-argus-metrics-micrometer` is an `<optional>true</optional>` dependency of the starter), **do not** reference its types directly from a `@Bean` method inside the always-active `MeridianArgusAutoConfiguration`. A class-literal `@ConditionalOnClass(SomeType.class)` only gates on `SomeType` being present — it does nothing to protect a *different* type referenced in the same method's signature. If a consumer has one optional dependency but not the other, Spring will still try to process that `@Bean` method and blow up with `NoClassDefFoundError` at runtime.
 
-The correct pattern (see `MeridianArgusMicrometerAutoConfiguration` for a worked example):
+The correct pattern (see `MeridianArgusMicrometerAutoConfiguration` and `MeridianArgusSqliteAutoConfiguration` for two worked examples — the latter follows this pattern from the start rather than being retrofitted after a bug, which is the goal for anything new):
 
 - Put the optional-dependency-consuming `@Bean` method in its **own** `@AutoConfiguration(after = MeridianArgusAutoConfiguration.class)` class
 - Register it in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`

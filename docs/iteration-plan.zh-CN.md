@@ -42,12 +42,16 @@ mvn -B verify
 - README 加一个覆盖率徽章（Codecov 或类似服务）
 - 这个改动本身成本很低（加一个 Maven 插件 + 一行 CI 配置），但能让"测试覆盖"这件事从"我们说做了"变成"有数字可查"
 
-### 4. 本地 SQLite Exporter（`docs/architecture.md` 里 v0.2 遗留项）
+### 4. 本地 SQLite Exporter（`docs/architecture.md` 里 v0.2 遗留项）—— ✅ 已完成
+
 不是所有团队都跑 Prometheus，很多小团队/个人项目更想要一个"零依赖、开箱即用"的存储方案。
 
-- 新建 `meridian-argus-metrics-sqlite` 模块，用 SQLite（`org.xerial:sqlite-jdbc`，无需额外服务）落盘每条 `LLMCallRecord` + 计价结果
-- 提供一个简单的查询辅助类（比如"过去 24 小时按 provider/model 分组的总花费"），不需要用户自己写 SQL
-- 这个功能补完之后，"不跑 Prometheus 也能用"这个故事就完整了，也是路线图里明确写着要做的下一项
+- ✅ 新建 `meridian-argus-metrics-sqlite` 模块，用 SQLite（`org.xerial:sqlite-jdbc`，无需额外服务）落盘每条 `LLMCallRecord` + 计价结果
+- ✅ 提供了 `UsageQuery` 查询辅助类（按 provider/model 分组的用量与花费、总花费、调用数），不需要用户自己写 SQL
+- ✅ Spring Boot Starter 里补了 `MeridianArgusSqliteAutoConfiguration`，严格照搬 Micrometer 那次 bug 修复的模式（独立 `@AutoConfiguration` 类 + 字符串形式 `@ConditionalOnClass`），默认关闭，需要显式 `meridian-argus.metrics.sqlite.enabled=true` 才会装配
+- ✅ 中英文使用说明都补了对应章节
+
+这个功能补完之后，"不跑 Prometheus 也能用"这个故事就完整了，也是路线图里明确写着要做的下一项。
 
 ---
 

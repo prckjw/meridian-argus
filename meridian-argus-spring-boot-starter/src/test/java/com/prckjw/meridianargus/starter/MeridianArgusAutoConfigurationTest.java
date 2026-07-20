@@ -20,7 +20,8 @@ class MeridianArgusAutoConfigurationTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     MeridianArgusAutoConfiguration.class,
-                    MeridianArgusMicrometerAutoConfiguration.class));
+                    MeridianArgusMicrometerAutoConfiguration.class,
+                    MeridianArgusSqliteAutoConfiguration.class));
 
     @Test
     void registersCoreBeansByDefault() {

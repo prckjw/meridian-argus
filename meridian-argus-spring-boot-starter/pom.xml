@@ -24,6 +24,11 @@
             <artifactId>meridian-argus-metrics-micrometer</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>com.prckjw.meridianargus</groupId>
+            <artifactId>meridian-argus-metrics-sqlite</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

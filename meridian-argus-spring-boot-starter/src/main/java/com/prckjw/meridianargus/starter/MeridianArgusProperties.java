@@ -12,6 +12,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   metrics:
  *     micrometer:
  *       enabled: true
+ *     sqlite:
+ *       enabled: false
+ *       path: meridian-argus.db
  * }</pre>
  */
 @ConfigurationProperties(prefix = "meridian-argus")
@@ -50,9 +53,14 @@ public class MeridianArgusProperties {
 
     public static class Metrics {
         private final Micrometer micrometer = new Micrometer();
+        private final Sqlite sqlite = new Sqlite();
 
         public Micrometer getMicrometer() {
             return micrometer;
+        }
+
+        public Sqlite getSqlite() {
+            return sqlite;
         }
 
         public static class Micrometer {
@@ -64,6 +72,35 @@ public class MeridianArgusProperties {
 
             public void setEnabled(boolean enabled) {
                 this.enabled = enabled;
+            }
+        }
+
+        public static class Sqlite {
+            /**
+             * Opt-in, unlike the Micrometer exporter: writing to a local
+             * file is an active side effect the consumer should choose
+             * deliberately, rather than something that activates just
+             * because a dependency happens to be on the classpath.
+             */
+            private boolean enabled = false;
+
+            /** Path to the SQLite database file, relative or absolute. Parent directories are created if missing. */
+            private String path = "meridian-argus.db";
+
+            public boolean isEnabled() {
+                return enabled;
+            }
+
+            public void setEnabled(boolean enabled) {
+                this.enabled = enabled;
+            }
+
+            public String getPath() {
+                return path;
+            }
+
+            public void setPath(String path) {
+                this.path = path;
             }
         }
     }
