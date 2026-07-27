@@ -23,6 +23,19 @@
         </license>
     </licenses>
 
+    <developers>
+        <developer>
+            <name>prckjw</name>
+            <url>https://github.com/prckjw</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/prckjw/meridian-argus</url>
+        <connection>scm:git:https://github.com/prckjw/meridian-argus.git</connection>
+        <developerConnection>scm:git:git@github.com:prckjw/meridian-argus.git</developerConnection>
+    </scm>
+
     <modules>
         <module>meridian-argus-core</module>
         <module>meridian-argus-provider-openai</module>
@@ -32,6 +45,7 @@
         <module>meridian-argus-provider-anthropic</module>
         <module>meridian-argus-metrics-micrometer</module>
         <module>meridian-argus-metrics-sqlite</module>
+        <module>meridian-argus-alerting</module>
         <module>meridian-argus-spring-boot-starter</module>
         <module>meridian-argus-examples/spring-boot-openai-demo</module>
     </modules>
@@ -108,6 +122,12 @@
 
             <dependency>
                 <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-alerting</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
                 <artifactId>meridian-argus-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -127,7 +147,40 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.2.5</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>0.8.12</version>
+                </plugin>
             </plugins>
         </pluginManagement>
+
+        <!-- In <plugins> (not just <pluginManagement>) so every child module
+             inherits and actually runs this: coverage instrumentation
+             needs to be on by default, not something each module has to
+             opt into individually. -->
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <!-- Instruments test JVMs so coverage data is actually collected. -->
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <!-- Per-module HTML/XML report, generated right after tests run. -->
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 </project>

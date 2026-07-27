@@ -176,6 +176,16 @@ meridian-argus:
     sqlite:
       enabled: false                                # SQLite 导出开关（默认关闭，需显式开启）
       path: meridian-argus.db                        # SQLite 数据库文件路径
+  alerting:
+    enabled: false                                  # 告警开关（默认关闭，需显式开启）
+    thresholds:
+      - name: hourly-budget
+        max-cost-usd: 50.00
+        window: PT1H                                # ISO-8601 时长格式
+    slack:
+      webhook-url: https://hooks.slack.com/services/...
+    teams:
+      webhook-url: https://xxxxx.webhook.office.com/...
 ```
 
 | 参数 | 类型 | 默认值 | 说明 |
@@ -185,6 +195,14 @@ meridian-argus:
 | `meridian-argus.metrics.micrometer.enabled` | boolean | `true` | 是否自动注册 `MicrometerMetricsExporter`。需要同时满足：classpath 上有 `micrometer-core` 和本项目的 `meridian-argus-metrics-micrometer` 模块、容器里存在 `MeterRegistry` Bean（通常由 `spring-boot-starter-actuator` 提供）。设为 `false` 可以在保留依赖的情况下临时关闭这一路导出，比如本地开发时不想产生指标噪音 |
 | `meridian-argus.metrics.sqlite.enabled` | boolean | **`false`** | 是否自动注册 `LocalStorageExporter`。跟 Micrometer 那项不一样，**默认关闭**——写本地文件是需要主动选择的副作用，不会因为 `meridian-argus-metrics-sqlite` 恰好在 classpath 上就自动生效，必须显式设为 `true` |
 | `meridian-argus.metrics.sqlite.path` | string | `meridian-argus.db` | SQLite 数据库文件路径，相对或绝对路径均可，父目录不存在会自动创建 |
+| `meridian-argus.alerting.enabled` | boolean | **`false`** | 是否自动注册 `RollingWindowAlertEvaluator`。同样**默认关闭**——会主动往外部 Webhook 发 HTTP 请求，不应该因为模块在 classpath 上就自动生效。设为 `true` 但没配置任何 `thresholds` 会在启动时直接失败（快速失败，而不是悄悄什么都不做） |
+| `meridian-argus.alerting.thresholds[n].name` | string | — | 阈值名称，会出现在通知消息里，同时也是 `RollingWindowAlertEvaluator#currentSpend(name)` 的查询 key |
+| `meridian-argus.alerting.thresholds[n].max-cost-usd` | BigDecimal | — | 触发阈值（美元） |
+| `meridian-argus.alerting.thresholds[n].window` | Duration | — | 滚动窗口时长，支持 ISO-8601 格式（如 `PT1H` 表示 1 小时、`P1D` 表示 1 天），Spring Boot 原生支持这种绑定，不需要额外配置 |
+| `meridian-argus.alerting.slack.webhook-url` | string | 空（不注册 Slack 通知） | Slack Incoming Webhook 地址 |
+| `meridian-argus.alerting.teams.webhook-url` | string | 空（不注册 Teams 通知） | Microsoft Teams Incoming Webhook 地址（通过 Teams 的 Workflows 应用创建，不是已经下线的旧版 Connector） |
+
+可以同时配置多个阈值（比如"每小时 $50"和"每天 $500"两条都要监控），每条都有独立的滚动窗口状态，互不影响。
 
 ### Bean 装配逻辑一览
 
@@ -195,6 +213,7 @@ meridian-argus:
 | `PricingEngine` | 同上 | 包装 `PricingConfig`，提供成本计算能力 |
 | `MicrometerMetricsExporter` | `meridian-argus.enabled=true` **且** `meridian-argus.metrics.micrometer.enabled=true`（默认）**且** classpath 上有 `MeterRegistry` 和 `MicrometerMetricsExporter` 类 | 会自动 `register` 到 `LLMObservabilityRegistry` |
 | `LocalStorageExporter` | `meridian-argus.enabled=true` **且** `meridian-argus.metrics.sqlite.enabled=true`（**默认 false，需要显式开启**）**且** classpath 上有 `LocalStorageExporter` 和 `org.sqlite.JDBC` 类 | 会自动 `register` 到 `LLMObservabilityRegistry`；应用关闭时自动调用 `close()` |
+| `RollingWindowAlertEvaluator` | `meridian-argus.enabled=true` **且** `meridian-argus.alerting.enabled=true`（**默认 false，需要显式开启**）**且** classpath 上有 `RollingWindowAlertEvaluator` 类 **且** 至少配置了一个 threshold | 会自动 `register` 到 `LLMObservabilityRegistry`；同时会自动收集容器里所有自定义的 `AlertNotifier` Bean，和配置里生成的 Slack/Teams 通知器合并使用 |
 
 以上所有 Bean 都用 `@ConditionalOnMissingBean` 修饰——如果你自己定义了同类型的 Bean（比如想自定义 `PricingEngine` 的构造方式），会优先使用你自己的定义，Starter 不会覆盖。
 
@@ -349,6 +368,85 @@ long callsLastWeek = query.callCount(Duration.ofDays(7));
 `UsageQuery` 每次调用都会开一个短连接，定位是"偶尔查一下"的场景（比如定时报表、小工具），不是高频热路径查询；如果你需要更高频率的查询，建议直接拿 SQLite 文件自己管理连接池。
 
 它跟正在写入的 `LocalStorageExporter` 可以安全地同时使用——数据库开启时用了 `PRAGMA journal_mode=WAL`，读不会被写阻塞。
+
+## 告警：滚动窗口阈值 + Webhook 通知
+
+`meridian-argus-alerting` 提供了一个纯内存的滚动窗口告警评估器，配合 Slack/Teams Webhook 通知器，用来回答"最近 N 小时/天花超过 $X 了吗"这类问题。
+
+### 启用方式（Spring Boot）
+
+```xml
+<dependency>
+    <groupId>com.prckjw.meridianargus</groupId>
+    <artifactId>meridian-argus-alerting</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+```yaml
+meridian-argus:
+  alerting:
+    enabled: true
+    thresholds:
+      - name: hourly-budget
+        max-cost-usd: 50.00
+        window: PT1H
+      - name: daily-budget
+        max-cost-usd: 500.00
+        window: P1D
+    slack:
+      webhook-url: https://hooks.slack.com/services/xxx/yyy/zzz
+    teams:
+      webhook-url: https://xxxxx.webhook.office.com/xxxxxxxxx
+```
+
+跟 SQLite Exporter 一样，这个也是**默认关闭**的——会主动往外部发 HTTP 请求，不应该因为依赖在 classpath 上就自动生效。可以同时配置多条阈值，每条独立计算，互不影响。
+
+### 通知语义：只在状态跳变时通知一次
+
+评估器不是"每次调用都检查一遍、超了就发一条消息"，而是只在**状态发生跳变**的那一刻通知：
+- 滚动窗口花费第一次超过阈值 → 发一条 `TRIGGERED` 通知
+- 之后哪怕又调用了 100 次、持续超支，也不会再重复通知
+- 直到窗口内的旧记录过期、花费降回阈值以下 → 发一条 `RECOVERED` 通知
+
+这是有意为之的设计——避免一次持续的成本尖峰导致某个人的手机被同一个告警刷屏。如果你需要"持续超支期间每隔一段时间提醒一次"这种效果，可以在自己实现的 `AlertNotifier` 里自己记录上次通知时间来做。
+
+### 自定义 Notifier
+
+除了内置的 Slack/Teams，你可以直接定义自己的 `AlertNotifier` Bean（比如接 PagerDuty、发邮件、写自己的日志系统），Starter 会自动收集容器里所有 `AlertNotifier` 类型的 Bean，和配置生成的 Slack/Teams 通知器合并使用，不需要手动接线：
+
+```java
+@Bean
+public AlertNotifier pagerDutyNotifier() {
+    return event -> {
+        if (event.state() == AlertEvent.State.TRIGGERED) {
+            pagerDutyClient.triggerIncident("MeridianArgus: " + event.threshold().getName());
+        }
+    };
+}
+```
+
+### 不使用 Spring Boot 的手动接入
+
+```java
+AlertThreshold hourly = new AlertThreshold("hourly-budget", new BigDecimal("50.00"), Duration.ofHours(1));
+
+List<AlertNotifier> notifiers = List.of(
+    new SlackWebhookNotifier(URI.create("https://hooks.slack.com/services/xxx/yyy/zzz"))
+);
+
+RollingWindowAlertEvaluator evaluator = new RollingWindowAlertEvaluator(pricingEngine, List.of(hourly), notifiers);
+registry.register(evaluator);
+
+// 随时查询某个阈值当前的滚动窗口花费
+BigDecimal current = evaluator.currentSpend("hourly-budget");
+```
+
+### 已知限制
+
+- 纯内存实现，应用重启后窗口状态会清零（不影响正确性，只是重启后需要重新累积到阈值才会再次触发）
+- 没有条目数量上限，只按时间窗口剪裁——如果窗口设置得很长（比如 30 天）且调用量很大，内存占用会持续增长，目前没有做额外的容量控制
+- Teams 的 Webhook 格式这几年变动比较大（微软已经把旧版 Office 365 Connector 下线，改成了 Workflows + Adaptive Card），如果发送失败，建议对照 [微软官方文档](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) 确认你的 Webhook 是通过 Workflows 应用创建的
 
 ## 自定义 Exporter
 

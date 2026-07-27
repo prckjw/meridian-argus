@@ -7,6 +7,7 @@ English | [简体中文](README.zh-CN.md)
 One consistent view of token usage, latency, error rate, and estimated cost — across Azure OpenAI, OpenAI, AWS Bedrock, Google Vertex AI, and Anthropic — without wiring up a separate dashboard for each provider your team happens to use.
 
 [![CI](https://github.com/prckjw/meridian-argus/actions/workflows/ci.yml/badge.svg)](https://github.com/prckjw/meridian-argus/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/prckjw/meridian-argus/branch/main/graph/badge.svg)](https://codecov.io/gh/prckjw/meridian-argus)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/)
 
@@ -114,6 +115,7 @@ All five have matching entries in [`pricing-config/default-pricing.yaml`](pricin
 | `meridian-argus-provider-*` | Thin wrappers around each provider's official SDK |
 | `meridian-argus-metrics-micrometer` | Exports records as Micrometer meters |
 | `meridian-argus-metrics-sqlite` | Zero-infrastructure local storage: writes records to a single-file SQLite database, with a read-side query helper for "spend over the last N hours" |
+| `meridian-argus-alerting` | Rolling-window cost threshold evaluation, with Slack and Microsoft Teams webhook notifiers |
 | `meridian-argus-spring-boot-starter` | Auto-configuration wiring everything above into Spring beans |
 | `meridian-argus-examples/*` | Runnable demo apps |
 

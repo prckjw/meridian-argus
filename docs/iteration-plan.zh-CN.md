@@ -36,11 +36,12 @@ mvn -B verify
 - 最小目标：把 `0.1.0` 正式发布到 Maven Central（`release.yml` 这个 workflow 已经搭好了骨架，需要配置 Sonatype 账号 + GPG 签名密钥）
 - 如果 Maven Central 的审核/签名流程一时搞不定，退而求其次先发到 GitHub Packages，让 README 里的安装说明是真的能直接 `<dependency>` 引用，而不是只能源码构建
 
-### 3. 补 CI 的代码覆盖率报告
+### 3. 补 CI 的代码覆盖率报告 —— ✅ 已完成
 目前测试覆盖率是靠人工数文件、数行数评估的，没有量化指标。建议：
-- CI 里加 JaCoCo 插件，跑完 `mvn verify` 输出覆盖率报告
-- README 加一个覆盖率徽章（Codecov 或类似服务）
-- 这个改动本身成本很低（加一个 Maven 插件 + 一行 CI 配置），但能让"测试覆盖"这件事从"我们说做了"变成"有数字可查"
+- ✅ 根 `pom.xml` 加了 `jacoco-maven-plugin`（放在 `<build><plugins>` 而不只是 `pluginManagement`，这样所有子模块自动继承执行，不用每个模块单独开）
+- ✅ CI 里 `mvn -B verify` 跑完后，用 `codecov-action` 把所有模块的 `jacoco.xml` 合并上传（Codecov 自己支持多文件合并，不需要额外搭一个聚合模块）
+- ✅ README 中英文都加了徽章
+- ⚠️ **需要人工操作**：徽章目前指向的是标准 Codecov URL 格式，要仓库 owner 去 [codecov.io](https://codecov.io) 用 GitHub 账号登录、找到这个仓库启用一次，并在 GitHub 仓库的 Secrets 里加一个 `CODECOV_TOKEN`，徽章才会显示真实数字（在这之前会显示"unknown"）
 
 ### 4. 本地 SQLite Exporter（`docs/architecture.md` 里 v0.2 遗留项）—— ✅ 已完成
 
@@ -57,15 +58,17 @@ mvn -B verify
 
 ## P2：视 P1 完成情况决定是否本轮启动
 
-### 5. 告警评估器 + Webhook 通知（`AlertThreshold` 落地）
+### 5. 告警评估器 + Webhook 通知（`AlertThreshold` 落地）—— ✅ 已完成
 `AlertThreshold` 这个数据类已经存在但完全没被使用（这次迭代刚给它补了基础测试）。真正有价值的是接上：
-- 一个滚动窗口评估器（比如"过去 1 小时花费超过 $50 就告警"），可以先用简单的内存滑动窗口实现，不需要一上来就搞持久化状态
-- 一个 Slack/Teams Webhook Notifier，触发阈值时发消息
-- 这个模块依赖前面的存储方案（SQLite 或至少内存累计器）才能算出"过去 N 小时花了多少"，所以放在 SQLite Exporter 之后比较合理
+- ✅ 新建 `meridian-argus-alerting` 模块，`RollingWindowAlertEvaluator` 用纯内存滑动窗口实现，支持同时配置多条独立阈值
+- ✅ `SlackWebhookNotifier`/`TeamsWebhookNotifier`，用 JDK 内置 `HttpClient`，没有额外引入 HTTP 库依赖；Teams 那边特意核实了微软这两年把旧版 Connector 下线、改成 Workflows + Adaptive Card 的变化，按新格式实现
+- ✅ 只在状态跳变（触发/恢复）时通知一次，避免持续超支期间被同一个告警刷屏
+- ✅ Spring Boot Starter 集成，支持用户自定义 `AlertNotifier` Bean 自动汇入，跟配置生成的 Slack/Teams 通知器合并使用
+- ✅ 中英文使用说明都补了完整章节
 
-### 6. 项目元数据小修（顺手做，不单独占用太多时间）
-- `meridian-argus-example-spring-boot-openai-demo` 这个 artifactId 和文件夹名 `meridian-argus-examples`（复数）不一致，容易造成一点点困惑，可以顺手统一
-- 检查 `pom.xml` 里的 `<url>`、`<scm>` 等 Maven Central 发布必需的元数据字段是否补全（发布到 Central 要求比较严格，这个正好跟第 2 项一起做）
+### 6. 项目元数据小修 —— ✅ 已完成
+- ✅ `artifactId` 从 `meridian-argus-example-spring-boot-openai-demo` 改成 `meridian-argus-examples-spring-boot-openai-demo`，跟文件夹名 `meridian-argus-examples`（复数）保持一致
+- ✅ 根 `pom.xml` 里 `<developers>`、`<scm>` 这两个 Maven Central 发布必需的字段之前丢失了（不确定是哪次改动漏掉的），已经补回去；`<url>`、`<licenses>` 本来就在
 
 ---
 

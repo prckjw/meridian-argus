@@ -1,3 +1,4 @@
 com.prckjw.meridianargus.starter.MeridianArgusAutoConfiguration
 com.prckjw.meridianargus.starter.MeridianArgusMicrometerAutoConfiguration
 com.prckjw.meridianargus.starter.MeridianArgusSqliteAutoConfiguration
+com.prckjw.meridianargus.starter.MeridianArgusAlertingAutoConfiguration

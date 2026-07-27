@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.prckjw.meridianargus</groupId>
+        <artifactId>meridian-argus-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>meridian-argus-alerting</artifactId>
+    <packaging>jar</packaging>
+    <name>MeridianArgus :: Alerting</name>
+    <description>
+        Rolling-window cost threshold evaluation on top of AlertThreshold
+        (see meridian-argus-core), plus Slack and Microsoft Teams webhook
+        notifiers. Deliberately has no dependency beyond core + slf4j: the
+        notifiers use the JDK-built-in java.net.http.HttpClient rather than
+        pulling in an HTTP client library, and the evaluator is purely
+        event-driven off LLMCallRecord publication -- no scheduler/timer
+        dependency needed.
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.prckjw.meridianargus</groupId>
+            <artifactId>meridian-argus-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

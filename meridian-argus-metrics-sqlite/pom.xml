@@ -24,7 +24,7 @@
 
     <properties>
         <!-- Pinned explicitly (not delegated to the Spring Boot BOM, which
-             doesn't manage this artifact) -- bump when a newer stable
+             doesn't manage this artifact): bump when a newer stable
              release is available. Verify against
              https://github.com/xerial/sqlite-jdbc/releases before bumping,
              this project's build environment has no network access to

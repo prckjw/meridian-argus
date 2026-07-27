@@ -21,7 +21,8 @@ class MeridianArgusAutoConfigurationTest {
             .withConfiguration(AutoConfigurations.of(
                     MeridianArgusAutoConfiguration.class,
                     MeridianArgusMicrometerAutoConfiguration.class,
-                    MeridianArgusSqliteAutoConfiguration.class));
+                    MeridianArgusSqliteAutoConfiguration.class,
+                    MeridianArgusAlertingAutoConfiguration.class));
 
     @Test
     void registersCoreBeansByDefault() {

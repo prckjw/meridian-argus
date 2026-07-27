@@ -2,6 +2,11 @@ package com.prckjw.meridianargus.starter;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import BigDecimal;
+import Duration;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Binds to {@code meridian-argus.*} in application.yml / application.properties.
  *
@@ -15,6 +20,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     sqlite:
  *       enabled: false
  *       path: meridian-argus.db
+ *   alerting:
+ *     enabled: false
+ *     thresholds:
+ *       - name: hourly-budget
+ *         max-cost-usd: 50.00
+ *         window: PT1H
+ *     slack:
+ *       webhook-url: https://hooks.slack.com/services/...
+ *     teams:
+ *       webhook-url: https://...webhook.office.com/...
  * }</pre>
  */
 @ConfigurationProperties(prefix = "meridian-argus")
@@ -30,6 +45,7 @@ public class MeridianArgusProperties {
     private String pricingConfigPath;
 
     private final Metrics metrics = new Metrics();
+    private final Alerting alerting = new Alerting();
 
     public boolean isEnabled() {
         return enabled;
@@ -49,6 +65,10 @@ public class MeridianArgusProperties {
 
     public Metrics getMetrics() {
         return metrics;
+    }
+
+    public Alerting getAlerting() {
+        return alerting;
     }
 
     public static class Metrics {
@@ -101,6 +121,101 @@ public class MeridianArgusProperties {
 
             public void setPath(String path) {
                 this.path = path;
+            }
+        }
+    }
+
+    public static class Alerting {
+        /**
+         * Opt-in, same reasoning as the SQLite exporter: this actively
+         * sends HTTP requests to an external webhook, which shouldn't
+         * happen just because the module is on the classpath.
+         */
+        private boolean enabled = false;
+
+        private List<ThresholdProperties> thresholds = new ArrayList<>();
+        private final Slack slack = new Slack();
+        private final Teams teams = new Teams();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public List<ThresholdProperties> getThresholds() {
+            return thresholds;
+        }
+
+        public void setThresholds(List<ThresholdProperties> thresholds) {
+            this.thresholds = thresholds;
+        }
+
+        public Slack getSlack() {
+            return slack;
+        }
+
+        public Teams getTeams() {
+            return teams;
+        }
+
+        /** One rolling-window threshold; maps 1:1 to core's {@code AlertThreshold}. */
+        public static class ThresholdProperties {
+            private String name;
+            private BigDecimal maxCostUsd;
+            /** Spring Boot binds plain ISO-8601 duration strings (e.g. {@code PT1H}, {@code P1D}) out of the box. */
+            private Duration window;
+
+            public String getName() {
+                return name;
+            }
+
+            public void setName(String name) {
+                this.name = name;
+            }
+
+            public BigDecimal getMaxCostUsd() {
+                return maxCostUsd;
+            }
+
+            public void setMaxCostUsd(BigDecimal maxCostUsd) {
+                this.maxCostUsd = maxCostUsd;
+            }
+
+            public Duration getWindow() {
+                return window;
+            }
+
+            public void setWindow(Duration window) {
+                this.window = window;
+            }
+        }
+
+        public static class Slack {
+            /** A Slack "Incoming Webhook" URL. Left unset (no notifier registered) if blank. */
+            private String webhookUrl;
+
+            public String getWebhookUrl() {
+                return webhookUrl;
+            }
+
+            public void setWebhookUrl(String webhookUrl) {
+                this.webhookUrl = webhookUrl;
+            }
+        }
+
+        public static class Teams {
+            /** A Microsoft Teams "Incoming Webhook" URL (via the Workflows app). Left unset (no notifier registered) if blank. */
+            private String webhookUrl;
+
+            public String getWebhookUrl() {
+                return webhookUrl;
+            }
+
+            public void setWebhookUrl(String webhookUrl) {
+                this.webhookUrl = webhookUrl;
             }
         }
     }

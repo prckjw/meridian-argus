@@ -11,7 +11,7 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>meridian-argus-example-spring-boot-openai-demo</artifactId>
+    <artifactId>meridian-argus-examples-spring-boot-openai-demo</artifactId>
     <name>MeridianArgus :: Examples :: Spring Boot + OpenAI Demo</name>
     <description>Minimal runnable app proving the end-to-end flow: OpenAI call -> interceptor -> pricing -> Micrometer -> /actuator/prometheus.</description>
 

@@ -7,6 +7,7 @@
 用一套统一的视角查看 token 用量、延迟、错误率和预估成本——覆盖 Azure OpenAI、OpenAI、AWS Bedrock、Google Vertex AI、Anthropic——不需要为团队用到的每个服务商单独搭一套监控面板。
 
 [![CI](https://github.com/prckjw/meridian-argus/actions/workflows/ci.yml/badge.svg)](https://github.com/prckjw/meridian-argus/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/prckjw/meridian-argus/branch/main/graph/badge.svg)](https://codecov.io/gh/prckjw/meridian-argus)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://openjdk.org/)
 
@@ -114,6 +115,7 @@ PricingEngine   MicrometerMetricsExporter   （你自己的 exporter）
 | `meridian-argus-provider-*` | 各服务商官方 SDK 的薄封装层 |
 | `meridian-argus-metrics-micrometer` | 把记录导出为 Micrometer 指标 |
 | `meridian-argus-metrics-sqlite` | 零基础设施的本地存储：把记录写入单文件 SQLite 数据库，并提供"最近 N 小时花了多少钱"这类常见问题的查询辅助类 |
+| `meridian-argus-alerting` | 滚动窗口成本阈值评估，附带 Slack 和 Microsoft Teams 的 Webhook 通知器 |
 | `meridian-argus-spring-boot-starter` | 自动装配，把上述所有组件接成 Spring Bean |
 | `meridian-argus-examples/*` | 可直接运行的示例应用 |
 

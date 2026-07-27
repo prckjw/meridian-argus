@@ -23,6 +23,18 @@ jobs:
       - name: Build and test
         run: mvn -B verify
 
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          # Globs every module's individually-generated jacoco.xml (see the
+          # jacoco-maven-plugin 'report' execution bound to the test phase
+          # in the root pom) -- Codecov merges them into one report itself,
+          # no Maven-level aggregator module needed.
+          files: '**/target/site/jacoco/jacoco.xml'
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4

@@ -174,6 +174,16 @@ meridian-argus:
     sqlite:
       enabled: false                                    # toggle the SQLite exporter (opt-in, see below)
       path: meridian-argus.db                            # SQLite database file path
+  alerting:
+    enabled: false                                      # toggle alerting (opt-in, see below)
+    thresholds:
+      - name: hourly-budget
+        max-cost-usd: 50.00
+        window: PT1H                                    # ISO-8601 duration
+    slack:
+      webhook-url: https://hooks.slack.com/services/...
+    teams:
+      webhook-url: https://xxxxx.webhook.office.com/...
 ```
 
 | Property | Type | Default | Description |
@@ -183,6 +193,14 @@ meridian-argus:
 | `meridian-argus.metrics.micrometer.enabled` | boolean | `true` | Whether to auto-register `MicrometerMetricsExporter`. Requires `micrometer-core`, this project's `meridian-argus-metrics-micrometer` module, and a `MeterRegistry` bean (typically from `spring-boot-starter-actuator`) all to be present. Set to `false` to disable this export path without removing the dependency — handy for local dev to reduce metric noise |
 | `meridian-argus.metrics.sqlite.enabled` | boolean | **`false`** | Whether to auto-register `LocalStorageExporter`. Unlike Micrometer, **opt-in by default** — writing to a local file is a deliberate side effect that shouldn't activate just because `meridian-argus-metrics-sqlite` happens to be on the classpath; you must set this to `true` explicitly |
 | `meridian-argus.metrics.sqlite.path` | string | `meridian-argus.db` | Path to the SQLite database file, relative or absolute. Parent directories are created automatically if missing |
+| `meridian-argus.alerting.enabled` | boolean | **`false`** | Whether to auto-register `RollingWindowAlertEvaluator`. Also **opt-in** — it actively sends HTTP requests to an external webhook, which shouldn't happen just because the module is present. Setting this to `true` with no `thresholds` configured fails fast at startup rather than silently doing nothing |
+| `meridian-argus.alerting.thresholds[n].name` | string | — | Threshold name, shown in notification messages and used as the lookup key for `RollingWindowAlertEvaluator#currentSpend(name)` |
+| `meridian-argus.alerting.thresholds[n].max-cost-usd` | BigDecimal | — | Trigger threshold in USD |
+| `meridian-argus.alerting.thresholds[n].window` | Duration | — | Rolling window length. Accepts plain ISO-8601 duration strings (`PT1H` = 1 hour, `P1D` = 1 day) — Spring Boot binds these natively, no extra configuration needed |
+| `meridian-argus.alerting.slack.webhook-url` | string | empty (no Slack notifier registered) | Slack Incoming Webhook URL |
+| `meridian-argus.alerting.teams.webhook-url` | string | empty (no Teams notifier registered) | Microsoft Teams Incoming Webhook URL (created via the Teams Workflows app, not the retired legacy Connectors) |
+
+Multiple thresholds can be configured at once (e.g. "$50/hour" and "$500/day" simultaneously) — each tracks its own independent rolling window.
 
 ### Bean wiring at a glance
 
@@ -193,6 +211,7 @@ meridian-argus:
 | `PricingEngine` | same | Wraps `PricingConfig`, provides cost calculation |
 | `MicrometerMetricsExporter` | `meridian-argus.enabled=true` **and** `meridian-argus.metrics.micrometer.enabled=true` (default) **and** `MeterRegistry` + `MicrometerMetricsExporter` classes present on classpath | Automatically `register`ed with `LLMObservabilityRegistry` |
 | `LocalStorageExporter` | `meridian-argus.enabled=true` **and** `meridian-argus.metrics.sqlite.enabled=true` (**default false, opt-in**) **and** `LocalStorageExporter` + `org.sqlite.JDBC` classes present on classpath | Automatically `register`ed with `LLMObservabilityRegistry`; `close()` is called automatically on application shutdown |
+| `RollingWindowAlertEvaluator` | `meridian-argus.enabled=true` **and** `meridian-argus.alerting.enabled=true` (**default false, opt-in**) **and** `RollingWindowAlertEvaluator` class present on classpath **and** at least one threshold configured | Automatically `register`ed with `LLMObservabilityRegistry`; also automatically collects every `AlertNotifier` bean in the context and combines them with the Slack/Teams notifiers built from configuration |
 
 Every bean above is `@ConditionalOnMissingBean` — define your own bean of the same type (e.g. a custom `PricingEngine`) and the starter backs off automatically.
 
@@ -348,6 +367,85 @@ long callsLastWeek = query.callCount(Duration.ofDays(7));
 `UsageQuery` opens a short-lived connection per call — it's meant for occasional questions (a scheduled report, a small CLI tool), not a high-frequency hot path. For higher query volume, manage your own connection pool against the SQLite file directly.
 
 It's safe to use concurrently with an active `LocalStorageExporter` writing to the same file — the database is opened with `PRAGMA journal_mode=WAL`, so reads aren't blocked by an in-flight write.
+
+## Alerting: Rolling-Window Thresholds + Webhook Notifiers
+
+`meridian-argus-alerting` provides an in-memory rolling-window evaluator, paired with Slack/Teams webhook notifiers, to answer "did we spend more than $X in the last N hours/days?"
+
+### Enabling it (Spring Boot)
+
+```xml
+<dependency>
+    <groupId>com.prckjw.meridianargus</groupId>
+    <artifactId>meridian-argus-alerting</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+```yaml
+meridian-argus:
+  alerting:
+    enabled: true
+    thresholds:
+      - name: hourly-budget
+        max-cost-usd: 50.00
+        window: PT1H
+      - name: daily-budget
+        max-cost-usd: 500.00
+        window: P1D
+    slack:
+      webhook-url: https://hooks.slack.com/services/xxx/yyy/zzz
+    teams:
+      webhook-url: https://xxxxx.webhook.office.com/xxxxxxxxx
+```
+
+Like the SQLite exporter, this is **opt-in** by default — it actively sends HTTP requests to an external webhook, which shouldn't happen just because the dependency is present. You can configure multiple thresholds at once; each tracks its own independent window.
+
+### Notification semantics: one notification per state transition
+
+The evaluator doesn't check-and-notify on every single call. It only notifies on a **state transition**:
+- The rolling-window spend first crosses above the threshold → one `TRIGGERED` notification
+- Even if 100 more calls happen while still over the limit → no repeat notifications
+- Once old entries age out of the window and spend drops back under the threshold → one `RECOVERED` notification
+
+This is deliberate — it avoids paging someone once per LLM call during a sustained cost spike. If you want periodic reminders while a threshold stays breached, implement that yourself in a custom `AlertNotifier` (e.g. track the last-notified time).
+
+### Custom notifiers
+
+Beyond the built-in Slack/Teams notifiers, define your own `AlertNotifier` bean (PagerDuty, email, your own logging pipeline, whatever) — the starter automatically collects every `AlertNotifier` bean in the context and combines them with the Slack/Teams notifiers built from configuration, no manual wiring needed:
+
+```java
+@Bean
+public AlertNotifier pagerDutyNotifier() {
+    return event -> {
+        if (event.state() == AlertEvent.State.TRIGGERED) {
+            pagerDutyClient.triggerIncident("MeridianArgus: " + event.threshold().getName());
+        }
+    };
+}
+```
+
+### Manual wiring without Spring Boot
+
+```java
+AlertThreshold hourly = new AlertThreshold("hourly-budget", new BigDecimal("50.00"), Duration.ofHours(1));
+
+List<AlertNotifier> notifiers = List.of(
+    new SlackWebhookNotifier(URI.create("https://hooks.slack.com/services/xxx/yyy/zzz"))
+);
+
+RollingWindowAlertEvaluator evaluator = new RollingWindowAlertEvaluator(pricingEngine, List.of(hourly), notifiers);
+registry.register(evaluator);
+
+// Query a threshold's current rolling-window spend at any time
+BigDecimal current = evaluator.currentSpend("hourly-budget");
+```
+
+### Known limitations
+
+- Purely in-memory — window state resets on application restart (doesn't affect correctness, just means spend has to re-accumulate to the threshold again before re-triggering)
+- No entry-count cap, only time-based pruning — a very long window (e.g. 30 days) combined with high call volume will grow memory usage over time with no additional capacity control currently in place
+- Microsoft Teams' webhook format has changed materially in recent years (the legacy Office 365 Connectors were retired in favor of Workflows + Adaptive Cards) — if delivery fails, check [Microsoft's current documentation](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) to confirm your webhook was created via the Workflows app
 
 ## Writing a Custom Exporter
 
