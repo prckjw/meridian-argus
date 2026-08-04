@@ -2,8 +2,8 @@ package com.prckjw.meridianargus.starter;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import BigDecimal;
-import Duration;
+import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +30,8 @@ import java.util.List;
  *       webhook-url: https://hooks.slack.com/services/...
  *     teams:
  *       webhook-url: https://...webhook.office.com/...
+ *   dashboard:
+ *     enabled: false
  * }</pre>
  */
 @ConfigurationProperties(prefix = "meridian-argus")
@@ -46,6 +48,7 @@ public class MeridianArgusProperties {
 
     private final Metrics metrics = new Metrics();
     private final Alerting alerting = new Alerting();
+    private final Dashboard dashboard = new Dashboard();
 
     public boolean isEnabled() {
         return enabled;
@@ -69,6 +72,10 @@ public class MeridianArgusProperties {
 
     public Alerting getAlerting() {
         return alerting;
+    }
+
+    public Dashboard getDashboard() {
+        return dashboard;
     }
 
     public static class Metrics {
@@ -217,6 +224,33 @@ public class MeridianArgusProperties {
             public void setWebhookUrl(String webhookUrl) {
                 this.webhookUrl = webhookUrl;
             }
+        }
+    }
+
+    public static class Dashboard {
+        /**
+         * Opt-in, same reasoning as the SQLite exporter and alerting: this
+         * exposes an HTTP endpoint, which shouldn't happen just because the
+         * module is present.
+         * <p>
+         * There is deliberately no separate {@code dashboard.path} property
+         * — the dashboard reads from the same file
+         * {@code meridian-argus.metrics.sqlite.path} points at, since it's
+         * a read-only view over data the SQLite exporter writes. Enabling
+         * the dashboard without also enabling
+         * {@code meridian-argus.metrics.sqlite.enabled} is allowed (e.g. if
+         * you want to point it at a database file being written by a
+         * separate process) but the dashboard will simply show no data
+         * until something writes to that path.
+         */
+        private boolean enabled = false;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 }

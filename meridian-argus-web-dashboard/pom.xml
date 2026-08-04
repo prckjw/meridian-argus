@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.prckjw.meridianargus</groupId>
+        <artifactId>meridian-argus-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>meridian-argus-web-dashboard</artifactId>
+    <packaging>jar</packaging>
+    <name>MeridianArgus :: Web Dashboard</name>
+    <description>
+        Optional lightweight read-only dashboard for teams that want a UI
+        without standing up Grafana. Reads from the same SQLite database
+        written by meridian-argus-metrics-sqlite via UsageQuery. Ships as a
+        single dependency-free static HTML page (no npm/webpack build step,
+        no CDN dependency, works fully offline) plus a small JSON API.
+        Depends on spring-webmvc for the controller annotations only, not
+        spring-boot-starter-webmvc -- the consuming application is expected
+        to already have its own embedded server; this module doesn't bring
+        a second one.
+    </description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.prckjw.meridianargus</groupId>
+            <artifactId>meridian-argus-metrics-sqlite</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-resttestclient</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

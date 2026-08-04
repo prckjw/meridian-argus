@@ -199,6 +199,7 @@ meridian-argus:
 | `meridian-argus.alerting.thresholds[n].window` | Duration | — | Rolling window length. Accepts plain ISO-8601 duration strings (`PT1H` = 1 hour, `P1D` = 1 day) — Spring Boot binds these natively, no extra configuration needed |
 | `meridian-argus.alerting.slack.webhook-url` | string | empty (no Slack notifier registered) | Slack Incoming Webhook URL |
 | `meridian-argus.alerting.teams.webhook-url` | string | empty (no Teams notifier registered) | Microsoft Teams Incoming Webhook URL (created via the Teams Workflows app, not the retired legacy Connectors) |
+| `meridian-argus.dashboard.enabled` | boolean | **`false`** | Whether to register the read-only dashboard's `DashboardController`. Also **opt-in** — it exposes an HTTP endpoint, which shouldn't happen just because the module is present. Requires a servlet-based web application (not WebFlux, not a non-web app). **There is no separate `dashboard.path` property** — it reads from the same file `meridian-argus.metrics.sqlite.path` points at, since it's a read-only view over SQLite data |
 
 Multiple thresholds can be configured at once (e.g. "$50/hour" and "$500/day" simultaneously) — each tracks its own independent rolling window.
 
@@ -212,6 +213,7 @@ Multiple thresholds can be configured at once (e.g. "$50/hour" and "$500/day" si
 | `MicrometerMetricsExporter` | `meridian-argus.enabled=true` **and** `meridian-argus.metrics.micrometer.enabled=true` (default) **and** `MeterRegistry` + `MicrometerMetricsExporter` classes present on classpath | Automatically `register`ed with `LLMObservabilityRegistry` |
 | `LocalStorageExporter` | `meridian-argus.enabled=true` **and** `meridian-argus.metrics.sqlite.enabled=true` (**default false, opt-in**) **and** `LocalStorageExporter` + `org.sqlite.JDBC` classes present on classpath | Automatically `register`ed with `LLMObservabilityRegistry`; `close()` is called automatically on application shutdown |
 | `RollingWindowAlertEvaluator` | `meridian-argus.enabled=true` **and** `meridian-argus.alerting.enabled=true` (**default false, opt-in**) **and** `RollingWindowAlertEvaluator` class present on classpath **and** at least one threshold configured | Automatically `register`ed with `LLMObservabilityRegistry`; also automatically collects every `AlertNotifier` bean in the context and combines them with the Slack/Teams notifiers built from configuration |
+| `DashboardController` | `meridian-argus.enabled=true` **and** `meridian-argus.dashboard.enabled=true` (**default false, opt-in**) **and** `DashboardController`/`UsageQuery` classes present on classpath **and** running as a servlet web application | Not registered with `LLMObservabilityRegistry` (it's a read-only query, not an exporter); wired as a plain Spring MVC bean serving `/meridian-argus/dashboard` and its JSON API |
 
 Every bean above is `@ConditionalOnMissingBean` — define your own bean of the same type (e.g. a custom `PricingEngine`) and the starter backs off automatically.
 
@@ -446,6 +448,44 @@ BigDecimal current = evaluator.currentSpend("hourly-budget");
 - Purely in-memory — window state resets on application restart (doesn't affect correctness, just means spend has to re-accumulate to the threshold again before re-triggering)
 - No entry-count cap, only time-based pruning — a very long window (e.g. 30 days) combined with high call volume will grow memory usage over time with no additional capacity control currently in place
 - Microsoft Teams' webhook format has changed materially in recent years (the legacy Office 365 Connectors were retired in favor of Workflows + Adaptive Cards) — if delivery fails, check [Microsoft's current documentation](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) to confirm your webhook was created via the Workflows app
+
+## Read-Only Web Dashboard
+
+`meridian-argus-web-dashboard` provides a zero-dependency read-only dashboard page for teams that don't want to stand up Grafana. It reads from the same SQLite file `meridian-argus-metrics-sqlite` writes to — purely a view, it never writes anything.
+
+### Enabling it (Spring Boot)
+
+```xml
+<dependency>
+    <groupId>com.prckjw.meridianargus</groupId>
+    <artifactId>meridian-argus-web-dashboard</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+```yaml
+meridian-argus:
+  metrics:
+    sqlite:
+      enabled: true              # the dashboard needs data to show, so this is usually on too
+      path: meridian-argus.db
+  dashboard:
+    enabled: true
+```
+
+Once the app is running, visit `http://localhost:<port>/meridian-argus/dashboard` for a page showing total cost, total calls, error count, and a per-provider/model breakdown table. A dropdown switches between the last 1 hour / 24 hours / 7 days / 30 days, and the page auto-refreshes every 30 seconds.
+
+**There's no separate `dashboard.path` property** — it reads from whatever `meridian-argus.metrics.sqlite.path` points at. You technically could enable the dashboard without the SQLite exporter itself (e.g. if a separate process writes to that file), but normally you'll want both properties on together.
+
+### Implementation notes
+
+- **No frontend build step**: the entire page is a single static HTML file bundled inside the jar (inline CSS + vanilla JS) — no npm/webpack, no CDN dependency, renders correctly fully offline
+- **Read-only**: the controller only queries data and is not wired into `LLMObservabilityRegistry` — unlike every other component in this project, it's not a "record receiver"
+- **JSON API**: if you want the raw data for something else, call `GET /meridian-argus/dashboard/api/summary?windowHours=24` directly rather than parsing the HTML
+
+### On the dependency choice
+
+This module depends on `spring-webmvc` (the annotation/dispatch types) rather than `spring-boot-starter-webmvc` — your application should already have its own embedded server, and this module doesn't bring a second one. As a consequence, the dashboard requires a **servlet-based** Spring MVC application (not WebFlux, not a non-web app), enforced via `@ConditionalOnWebApplication(type = SERVLET)` — when that condition isn't met, the auto-configuration quietly skips rather than failing.
 
 ## Writing a Custom Exporter
 

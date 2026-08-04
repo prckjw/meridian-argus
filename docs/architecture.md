@@ -36,6 +36,7 @@ The trade-off is that integration is one extra lambda instead of being fully aut
 - **metrics-micrometer**: depends on core + Micrometer. Kept separate so consumers who want a different exporter (e.g. straight to a webhook, or OpenTelemetry) aren't forced to pull in Micrometer.
 - **metrics-sqlite**: depends on core + the sqlite-jdbc driver. Also kept separate for the same reason — most consumers running Prometheus already have no use for a local SQLite file, and vice versa. The two exporters can be registered simultaneously with no conflict (`LLMObservabilityRegistry` fans out to every registered interceptor).
 - **alerting**: depends on core + slf4j only — no HTTP client library dependency (the Slack/Teams notifiers use the JDK's built-in `java.net.http.HttpClient`) and no scheduler dependency (the evaluator is purely event-driven off `LLMCallRecord` publication, not a periodic poll). Registers itself as another `LLMCallInterceptor` alongside whichever exporters are active.
+- **web-dashboard**: depends on core (transitively) + metrics-sqlite + `spring-webmvc` (the annotation types only, not `spring-boot-starter-webmvc` — the consuming application already has its own embedded server, this module doesn't bring a second one). Read-only: it queries the same SQLite file `metrics-sqlite` writes to via `UsageQuery`, it never writes anything itself. The HTML page is a single classpath resource with inline CSS/JS — no separate frontend build step, no CDN dependency, works fully offline.
 - **spring-boot-starter**: the only module that knows about Spring. Wires the above into beans via `@ConditionalOnClass`/`@ConditionalOnProperty` so unused pieces (e.g. Micrometer export when no `MeterRegistry` bean exists) never activate.
 
 ## Roadmap
@@ -43,7 +44,7 @@ The trade-off is that integration is one extra lambda instead of being fully aut
 - ~~**v0.2**: Bedrock, Vertex AI, and Anthropic adapters~~ done — shipped in `meridian-argus-provider-bedrock`, `meridian-argus-provider-vertex`, `meridian-argus-provider-anthropic`
 - ~~**v0.2**: Local SQLite exporter (`LocalStorageExporter`) for teams that don't run Prometheus~~ done — shipped in `meridian-argus-metrics-sqlite`, with a `UsageQuery` helper for common "spend over the last N hours" questions
 - ~~**v0.3**: Rolling-window alert evaluator built on `AlertThreshold`, with a Slack/Teams webhook notifier~~ done — shipped in `meridian-argus-alerting` (`RollingWindowAlertEvaluator`, `SlackWebhookNotifier`, `TeamsWebhookNotifier`)
-- **v0.3**: Optional lightweight web dashboard (`meridian-argus-web-dashboard`) for teams that want a UI without standing up Grafana
+- ~~**v0.3**: Optional lightweight web dashboard (`meridian-argus-web-dashboard`) for teams that want a UI without standing up Grafana~~ done — a single dependency-free static HTML page (no npm/webpack, works offline) plus a small JSON API, reading from the same SQLite database `meridian-argus-metrics-sqlite` writes to
 - **Later**: OpenTelemetry trace export as an alternative to/alongside Micrometer
 - **Later**: Prompt/response content capture with configurable redaction, opt-in only
 

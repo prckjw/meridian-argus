@@ -74,7 +74,7 @@ mvn -B verify
 
 ## P3：明确往后放（本轮不做，但记录在案避免遗忘）
 
-- **Web Dashboard**（`meridian-argus-web-dashboard`）：工作量较大（前端 + 后端都要），且 Grafana Dashboard 已经能覆盖大部分可视化需求，优先级往后放
+- ~~**Web Dashboard**（`meridian-argus-web-dashboard`）：工作量较大（前端 + 后端都要），且 Grafana Dashboard 已经能覆盖大部分可视化需求，优先级往后放~~ ✅ 已完成——用零依赖的单文件静态 HTML + 原生 JS 实现（不引入 npm/webpack 构建链），后端读取 `meridian-argus-metrics-sqlite` 写入的同一个 SQLite 文件，只读、不写入。依赖上特意选了 `spring-webmvc` 而不是 `spring-boot-starter-webmvc`，避免给宿主应用重复带一个内嵌服务器
 - **OpenTelemetry 导出**：等 Micrometer 路径稳定跑一段时间、收集到真实反馈后再做，避免同时维护两套导出机制
 - **Prompt/Response 内容采集**：涉及数据脱敏、合规，需要更谨慎的设计讨论（比如默认关闭、脱敏规则怎么配置），不适合仓促上马
 
@@ -84,11 +84,14 @@ mvn -B verify
 
 本轮迭代结束时，希望能做到：
 
-- [ ] `mvn -B verify` 在全新 clone 的仓库上一次跑通，无编译错误、无测试失败
-- [ ] Maven Central（或 GitHub Packages）上能搜到 `com.prckjw.meridianargus:meridian-argus-spring-boot-starter:0.1.0`
-- [ ] CI 输出覆盖率报告，README 有徽章
-- [ ] SQLite Exporter 有对应的模块、测试，以及 `usage-guide.md`/`usage-guide.zh-CN.md` 里的使用说明
-- [ ] 中英文文档保持同步更新（这是个容易被忽略的事项，每次功能改动最后都要检查一遍双语文档）
+- [ ] `mvn -B verify` 在全新 clone 的仓库上一次跑通，无编译错误、无测试失败 —— **仍未完成，需要你本地验证**（开发环境访问不了 Maven Central）
+- [ ] Maven Central（或 GitHub Packages）上能搜到 `com.prckjw.meridianargus:meridian-argus-spring-boot-starter:0.1.0` —— **仍未完成，需要真实 Sonatype 账号 + GPG 签名密钥**
+- [x] CI 输出覆盖率报告，README 有徽章
+- [x] SQLite Exporter 有对应的模块、测试，以及 `usage-guide.md`/`usage-guide.zh-CN.md` 里的使用说明
+- [x] 中英文文档保持同步更新
+- [x]（追加完成，原计划外）告警评估器 + Webhook 通知落地
+
+**当前状态**：P1/P2 里所有能靠写代码完成的项都做完了。剩下的两项（P0 编译验证、Maven Central 发布）都需要人工操作——前者需要你在有 Maven Central 网络访问权限的环境里跑一次 `mvn -B verify` 并把结果反馈给我；后者需要你去注册 Sonatype/Central Publisher 账号、生成 GPG 签名密钥，这些我没法替你完成。
 
 ---
 

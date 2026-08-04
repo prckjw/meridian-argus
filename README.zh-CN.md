@@ -116,6 +116,7 @@ PricingEngine   MicrometerMetricsExporter   （你自己的 exporter）
 | `meridian-argus-metrics-micrometer` | 把记录导出为 Micrometer 指标 |
 | `meridian-argus-metrics-sqlite` | 零基础设施的本地存储：把记录写入单文件 SQLite 数据库，并提供"最近 N 小时花了多少钱"这类常见问题的查询辅助类 |
 | `meridian-argus-alerting` | 滚动窗口成本阈值评估，附带 Slack 和 Microsoft Teams 的 Webhook 通知器 |
+| `meridian-argus-web-dashboard` | 可选的只读 Dashboard（零依赖静态 HTML 页面 + JSON API），数据来源是 SQLite 数据库 |
 | `meridian-argus-spring-boot-starter` | 自动装配，把上述所有组件接成 Spring Bean |
 | `meridian-argus-examples/*` | 可直接运行的示例应用 |
 

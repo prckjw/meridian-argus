@@ -201,6 +201,7 @@ meridian-argus:
 | `meridian-argus.alerting.thresholds[n].window` | Duration | — | 滚动窗口时长，支持 ISO-8601 格式（如 `PT1H` 表示 1 小时、`P1D` 表示 1 天），Spring Boot 原生支持这种绑定，不需要额外配置 |
 | `meridian-argus.alerting.slack.webhook-url` | string | 空（不注册 Slack 通知） | Slack Incoming Webhook 地址 |
 | `meridian-argus.alerting.teams.webhook-url` | string | 空（不注册 Teams 通知） | Microsoft Teams Incoming Webhook 地址（通过 Teams 的 Workflows 应用创建，不是已经下线的旧版 Connector） |
+| `meridian-argus.dashboard.enabled` | boolean | **`false`** | 是否注册只读 Dashboard 的 `DashboardController`。同样**默认关闭**——会暴露一个 HTTP 端点，不应该因为模块在 classpath 上就自动生效。要求应用是 Servlet 型 Web 应用（不能是 WebFlux 或非 Web 应用）。**没有单独的 `dashboard.path` 配置项**——读取的就是 `meridian-argus.metrics.sqlite.path` 指向的同一个文件，因为它本质上是 SQLite 数据的只读视图 |
 
 可以同时配置多个阈值（比如"每小时 $50"和"每天 $500"两条都要监控），每条都有独立的滚动窗口状态，互不影响。
 
@@ -214,6 +215,7 @@ meridian-argus:
 | `MicrometerMetricsExporter` | `meridian-argus.enabled=true` **且** `meridian-argus.metrics.micrometer.enabled=true`（默认）**且** classpath 上有 `MeterRegistry` 和 `MicrometerMetricsExporter` 类 | 会自动 `register` 到 `LLMObservabilityRegistry` |
 | `LocalStorageExporter` | `meridian-argus.enabled=true` **且** `meridian-argus.metrics.sqlite.enabled=true`（**默认 false，需要显式开启**）**且** classpath 上有 `LocalStorageExporter` 和 `org.sqlite.JDBC` 类 | 会自动 `register` 到 `LLMObservabilityRegistry`；应用关闭时自动调用 `close()` |
 | `RollingWindowAlertEvaluator` | `meridian-argus.enabled=true` **且** `meridian-argus.alerting.enabled=true`（**默认 false，需要显式开启**）**且** classpath 上有 `RollingWindowAlertEvaluator` 类 **且** 至少配置了一个 threshold | 会自动 `register` 到 `LLMObservabilityRegistry`；同时会自动收集容器里所有自定义的 `AlertNotifier` Bean，和配置里生成的 Slack/Teams 通知器合并使用 |
+| `DashboardController` | `meridian-argus.enabled=true` **且** `meridian-argus.dashboard.enabled=true`（**默认 false，需要显式开启**）**且** classpath 上有 `DashboardController`/`UsageQuery` 类 **且** 是 Servlet 型 Web 应用 | 不注册到 `LLMObservabilityRegistry`（这是只读查询，不是 exporter）；作为普通 Spring MVC Bean 提供 `/meridian-argus/dashboard` 页面和对应 JSON API |
 
 以上所有 Bean 都用 `@ConditionalOnMissingBean` 修饰——如果你自己定义了同类型的 Bean（比如想自定义 `PricingEngine` 的构造方式），会优先使用你自己的定义，Starter 不会覆盖。
 
@@ -447,6 +449,44 @@ BigDecimal current = evaluator.currentSpend("hourly-budget");
 - 纯内存实现，应用重启后窗口状态会清零（不影响正确性，只是重启后需要重新累积到阈值才会再次触发）
 - 没有条目数量上限，只按时间窗口剪裁——如果窗口设置得很长（比如 30 天）且调用量很大，内存占用会持续增长，目前没有做额外的容量控制
 - Teams 的 Webhook 格式这几年变动比较大（微软已经把旧版 Office 365 Connector 下线，改成了 Workflows + Adaptive Card），如果发送失败，建议对照 [微软官方文档](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) 确认你的 Webhook 是通过 Workflows 应用创建的
+
+## 只读 Web Dashboard
+
+`meridian-argus-web-dashboard` 提供一个零依赖的只读 Dashboard 页面，给不想搭 Grafana 的团队用。它读取的是 `meridian-argus-metrics-sqlite` 写入的同一个 SQLite 文件，纯展示，不写入任何数据。
+
+### 启用方式（Spring Boot）
+
+```xml
+<dependency>
+    <groupId>com.prckjw.meridianargus</groupId>
+    <artifactId>meridian-argus-web-dashboard</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+```yaml
+meridian-argus:
+  metrics:
+    sqlite:
+      enabled: true              # Dashboard 要有数据可看，通常需要同时开启 SQLite Exporter
+      path: meridian-argus.db
+  dashboard:
+    enabled: true
+```
+
+启动应用后访问 `http://localhost:<port>/meridian-argus/dashboard`，就能看到一个包含总花费、总调用数、错误数、按 Provider/Model 拆分的表格的页面，页面自带一个下拉框可以切换"最近1小时/24小时/7天/30天"的统计窗口，每 30 秒自动刷新一次。
+
+**这个模块没有单独的 `dashboard.path` 配置项**——读取的就是 `meridian-argus.metrics.sqlite.path` 指向的同一个文件。理论上你也可以只开 Dashboard、不开 SQLite Exporter 本身（比如这个文件是另一个进程在写），但正常场景下这两个配置项应该一起打开。
+
+### 技术实现说明
+
+- **零前端构建依赖**：整个页面就是打包在 jar 里的一份静态 HTML 文件（内联 CSS + 原生 JS），没有 npm/webpack 构建步骤，也不依赖任何 CDN 资源，完全离线也能正常渲染
+- **只读**：Controller 只查询数据，不接入 `LLMObservabilityRegistry`（跟其他 Exporter 不一样，它不是一个"记录接收方"）
+- **JSON API**：如果你想自己拿数据做别的展示，可以直接调 `GET /meridian-argus/dashboard/api/summary?windowHours=24` 拿到结构化数据，不需要解析 HTML
+
+### 依赖说明
+
+这个模块依赖的是 `spring-webmvc`（注解和 MVC 分发相关的类），而不是 `spring-boot-starter-webmvc`——因为你的应用本来就应该已经有自己的内嵌 Web 服务器了，这个模块不会再额外带一个进来。也因此，Dashboard 要求宿主应用是**Servlet 型**的 Spring MVC 应用（不支持 WebFlux 响应式应用，也不支持完全没有 Web 层的应用），这一点通过 `@ConditionalOnWebApplication(type = SERVLET)` 保证——不满足条件时会安静地跳过装配，不会报错。
 
 ## 自定义 Exporter
 

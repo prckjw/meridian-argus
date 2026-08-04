@@ -34,6 +34,11 @@
             <artifactId>meridian-argus-alerting</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>com.prckjw.meridianargus</groupId>
+            <artifactId>meridian-argus-web-dashboard</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

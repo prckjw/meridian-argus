@@ -14,14 +14,17 @@ import java.lang.annotation.Target;
  * present — a {@code MicrometerMetricsExporter} wired to the application's
  * {@code MeterRegistry}, a {@code LocalStorageExporter} writing to a local
  * SQLite file (opt-in via {@code meridian-argus.metrics.sqlite.enabled=true}),
- * and/or a {@code RollingWindowAlertEvaluator} with Slack/Teams webhook
- * notifiers (opt-in via {@code meridian-argus.alerting.enabled=true}).
+ * a {@code RollingWindowAlertEvaluator} with Slack/Teams webhook notifiers
+ * (opt-in via {@code meridian-argus.alerting.enabled=true}), and/or a
+ * read-only web dashboard at {@code /meridian-argus/dashboard} (opt-in via
+ * {@code meridian-argus.dashboard.enabled=true}).
  * <p>
  * This annotation is a convenience marker on top of Spring Boot's regular
  * auto-configuration mechanism ({@code MeridianArgusAutoConfiguration},
  * {@code MeridianArgusMicrometerAutoConfiguration},
- * {@code MeridianArgusSqliteAutoConfiguration}, and
- * {@code MeridianArgusAlertingAutoConfiguration} are also registered
+ * {@code MeridianArgusSqliteAutoConfiguration},
+ * {@code MeridianArgusAlertingAutoConfiguration}, and
+ * {@code MeridianArgusDashboardAutoConfiguration} are also registered
  * automatically via
  * {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports},
  * so this explicit {@code @Import} is redundant in practice — it exists
@@ -45,7 +48,8 @@ import java.lang.annotation.Target;
         MeridianArgusAutoConfiguration.class,
         MeridianArgusMicrometerAutoConfiguration.class,
         MeridianArgusSqliteAutoConfiguration.class,
-        MeridianArgusAlertingAutoConfiguration.class
+        MeridianArgusAlertingAutoConfiguration.class,
+        MeridianArgusDashboardAutoConfiguration.class
 })
 public @interface EnableLLMObservability {
 }
