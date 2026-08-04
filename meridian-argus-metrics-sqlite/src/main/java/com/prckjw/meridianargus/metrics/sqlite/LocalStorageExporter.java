@@ -134,8 +134,8 @@ public final class LocalStorageExporter extends AbstractMetricsExporter implemen
             ps.setInt(5, record.isSuccess() ? 1 : 0);
             ps.setString(6, record.getErrorType());
             ps.setString(7, record.getCallerId());
-            ps.setInt(8, record.getTokenUsage().getInputTokens());
-            ps.setInt(9, record.getTokenUsage().getOutputTokens());
+            ps.setLong(8, record.getTokenUsage().getInputTokens());
+            ps.setLong(9, record.getTokenUsage().getOutputTokens());
             ps.setInt(10, cost.isPriceKnown() ? 1 : 0);
             ps.setString(11, cost.isPriceKnown() ? cost.getInputCost().toPlainString() : null);
             ps.setString(12, cost.isPriceKnown() ? cost.getOutputCost().toPlainString() : null);

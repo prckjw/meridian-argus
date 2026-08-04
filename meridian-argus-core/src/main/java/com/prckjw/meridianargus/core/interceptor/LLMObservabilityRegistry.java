@@ -1,6 +1,8 @@
 package com.prckjw.meridianargus.core.interceptor;
 
 import com.prckjw.meridianargus.core.model.LLMCallRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -12,6 +14,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * an application — the Spring Boot starter wires this up as a singleton bean.
  */
 public final class LLMObservabilityRegistry {
+
+    private static final Logger LOG = LoggerFactory.getLogger(LLMObservabilityRegistry.class);
 
     private final List<LLMCallInterceptor> interceptors = new CopyOnWriteArrayList<>();
 
@@ -25,8 +29,11 @@ public final class LLMObservabilityRegistry {
 
     /**
      * Called by provider adapters after every LLM call completes.
-     * Exceptions thrown by individual interceptors are swallowed and logged
-     * elsewhere — observability must never break the caller's business logic.
+     * Exceptions thrown by individual interceptors are caught, logged via
+     * SLF4J (with the full stack trace, not just the message — this is the
+     * only signal a consumer gets that one of their exporters/notifiers is
+     * broken), and never rethrown: observability must never break the
+     * caller's business logic.
      */
     public void publish(LLMCallRecord record) {
         for (LLMCallInterceptor interceptor : interceptors) {
@@ -34,8 +41,9 @@ public final class LLMObservabilityRegistry {
                 interceptor.onCallCompleted(record);
             } catch (RuntimeException ex) {
                 // Deliberately isolated: one bad exporter must not affect others
-                // or the calling application. See core logging guidance in README.
-                System.err.println("[MeridianArgus] interceptor failed: " + ex.getMessage());
+                // or the calling application.
+                LOG.warn("Interceptor {} failed to process an LLM call record",
+                        interceptor.getClass().getSimpleName(), ex);
             }
         }
     }
