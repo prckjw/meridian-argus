@@ -117,6 +117,7 @@ All five have matching entries in [`pricing-config/default-pricing.yaml`](pricin
 | `meridian-argus-metrics-sqlite` | Zero-infrastructure local storage: writes records to a single-file SQLite database, with a read-side query helper for "spend over the last N hours" |
 | `meridian-argus-alerting` | Rolling-window cost threshold evaluation, with Slack and Microsoft Teams webhook notifiers |
 | `meridian-argus-web-dashboard` | Optional read-only dashboard (dependency-free static HTML page + JSON API) reading from the SQLite database |
+| `meridian-argus-otel` | Exports each call as an OpenTelemetry span using the GenAI semantic conventions, alongside whatever tracing pipeline the application already has configured |
 | `meridian-argus-spring-boot-starter` | Auto-configuration wiring everything above into Spring beans |
 | `meridian-argus-examples/*` | Runnable demo apps |
 

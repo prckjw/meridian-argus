@@ -26,6 +26,11 @@
         </dependency>
         <dependency>
             <groupId>com.prckjw.meridianargus</groupId>
+            <artifactId>meridian-argus-otel</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.prckjw.meridianargus</groupId>
             <artifactId>meridian-argus-metrics-sqlite</artifactId>
             <optional>true</optional>
         </dependency>
@@ -58,6 +63,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- Test-only: meridian-argus-otel's own opentelemetry-sdk test
+                 dependency doesn't propagate here (test scope never does),
+                 and MeridianArgusOtelAutoConfigurationTest needs a real
+                 OpenTelemetry instance to register as a bean. Kept in sync
+                 with meridian-argus-otel/pom.xml's opentelemetry.version. -->
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+            <version>1.64.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

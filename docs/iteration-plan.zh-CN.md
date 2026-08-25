@@ -75,7 +75,7 @@ mvn -B verify
 ## P3：明确往后放（本轮不做，但记录在案避免遗忘）
 
 - ~~**Web Dashboard**（`meridian-argus-web-dashboard`）：工作量较大（前端 + 后端都要），且 Grafana Dashboard 已经能覆盖大部分可视化需求，优先级往后放~~ ✅ 已完成——用零依赖的单文件静态 HTML + 原生 JS 实现（不引入 npm/webpack 构建链），后端读取 `meridian-argus-metrics-sqlite` 写入的同一个 SQLite 文件，只读、不写入。依赖上特意选了 `spring-webmvc` 而不是 `spring-boot-starter-webmvc`，避免给宿主应用重复带一个内嵌服务器
-- **OpenTelemetry 导出**：等 Micrometer 路径稳定跑一段时间、收集到真实反馈后再做，避免同时维护两套导出机制
+- ~~**OpenTelemetry 导出**：等 Micrometer 路径稳定跑一段时间、收集到真实反馈后再做，避免同时维护两套导出机制~~ ✅ 已完成——这项是在你明确要求"直接开工"之后提前做的，没有真的等到 Micrometer 路径收集完反馈。好在两套导出机制（`meridian-argus-metrics-micrometer` 和 `meridian-argus-otel`）可以同时启用、互不冲突，所以提前做也不影响 Micrometer 那条路径本身。属性用的是 `meridian-argus.metrics.otel.enabled`（跟 micrometer/sqlite 同级），默认 `true`（因为它本身不产生任何副作用，只有真的存在 `OpenTelemetry` Bean 时才会激活）
 - **Prompt/Response 内容采集**：涉及数据脱敏、合规，需要更谨慎的设计讨论（比如默认关闭、脱敏规则怎么配置），不适合仓促上马
 
 ---

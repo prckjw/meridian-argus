@@ -21,6 +21,7 @@ class MeridianArgusAutoConfigurationTest {
             .withConfiguration(AutoConfigurations.of(
                     MeridianArgusAutoConfiguration.class,
                     MeridianArgusMicrometerAutoConfiguration.class,
+                    MeridianArgusOtelAutoConfiguration.class,
                     MeridianArgusSqliteAutoConfiguration.class,
                     MeridianArgusAlertingAutoConfiguration.class));
 

@@ -171,6 +171,8 @@ meridian-argus:
   metrics:
     micrometer:
       enabled: true                                    # toggle the Micrometer exporter
+    otel:
+      enabled: true                                     # toggle the OpenTelemetry exporter (on by default, see below)
     sqlite:
       enabled: false                                    # toggle the SQLite exporter (opt-in, see below)
       path: meridian-argus.db                            # SQLite database file path
@@ -191,6 +193,7 @@ meridian-argus:
 | `meridian-argus.enabled` | boolean | `true` | Master switch. When `false`, the starter creates no beans at all (including the registry) — observability is fully disabled |
 | `meridian-argus.pricing-config-path` | string | empty (bundled table) | Overrides the pricing table. Accepts Spring `Resource` prefixes: `classpath:xxx.yaml`, `file:/path/to/xxx.yaml`. When unset, the bundled `pricing-config/default-pricing.yaml` (shipped inside the `meridian-argus-core` jar) is used |
 | `meridian-argus.metrics.micrometer.enabled` | boolean | `true` | Whether to auto-register `MicrometerMetricsExporter`. Requires `micrometer-core`, this project's `meridian-argus-metrics-micrometer` module, and a `MeterRegistry` bean (typically from `spring-boot-starter-actuator`) all to be present. Set to `false` to disable this export path without removing the dependency — handy for local dev to reduce metric noise |
+| `meridian-argus.metrics.otel.enabled` | boolean | `true` | Whether to auto-register `OpenTelemetryTraceExporter`. **On by default**, same reasoning as Micrometer — it does nothing on its own; it only actually activates when an `OpenTelemetry` bean already exists in the context (typically from `opentelemetry-spring-boot-starter` or a manual SDK setup). This module never creates or configures an OpenTelemetry SDK itself, it only adds spans to a tracing pipeline you've already wired up |
 | `meridian-argus.metrics.sqlite.enabled` | boolean | **`false`** | Whether to auto-register `LocalStorageExporter`. Unlike Micrometer, **opt-in by default** — writing to a local file is a deliberate side effect that shouldn't activate just because `meridian-argus-metrics-sqlite` happens to be on the classpath; you must set this to `true` explicitly |
 | `meridian-argus.metrics.sqlite.path` | string | `meridian-argus.db` | Path to the SQLite database file, relative or absolute. Parent directories are created automatically if missing |
 | `meridian-argus.alerting.enabled` | boolean | **`false`** | Whether to auto-register `RollingWindowAlertEvaluator`. Also **opt-in** — it actively sends HTTP requests to an external webhook, which shouldn't happen just because the module is present. Setting this to `true` with no `thresholds` configured fails fast at startup rather than silently doing nothing |
@@ -211,6 +214,7 @@ Multiple thresholds can be configured at once (e.g. "$50/hour" and "$500/day" si
 | `PricingConfig` | same | Loads from `pricing-config-path` if set, otherwise the bundled table |
 | `PricingEngine` | same | Wraps `PricingConfig`, provides cost calculation |
 | `MicrometerMetricsExporter` | `meridian-argus.enabled=true` **and** `meridian-argus.metrics.micrometer.enabled=true` (default) **and** `MeterRegistry` + `MicrometerMetricsExporter` classes present on classpath | Automatically `register`ed with `LLMObservabilityRegistry` |
+| `OpenTelemetryTraceExporter` | `meridian-argus.enabled=true` **and** `meridian-argus.metrics.otel.enabled=true` (default) **and** `OpenTelemetry`/`OpenTelemetryTraceExporter` classes present on classpath **and** an `OpenTelemetry` bean present in the context | Automatically `register`ed with `LLMObservabilityRegistry`; like Micrometer, whether it actually activates hinges on the `OpenTelemetry` bean being present, not this flag alone |
 | `LocalStorageExporter` | `meridian-argus.enabled=true` **and** `meridian-argus.metrics.sqlite.enabled=true` (**default false, opt-in**) **and** `LocalStorageExporter` + `org.sqlite.JDBC` classes present on classpath | Automatically `register`ed with `LLMObservabilityRegistry`; `close()` is called automatically on application shutdown |
 | `RollingWindowAlertEvaluator` | `meridian-argus.enabled=true` **and** `meridian-argus.alerting.enabled=true` (**default false, opt-in**) **and** `RollingWindowAlertEvaluator` class present on classpath **and** at least one threshold configured | Automatically `register`ed with `LLMObservabilityRegistry`; also automatically collects every `AlertNotifier` bean in the context and combines them with the Slack/Teams notifiers built from configuration |
 | `DashboardController` | `meridian-argus.enabled=true` **and** `meridian-argus.dashboard.enabled=true` (**default false, opt-in**) **and** `DashboardController`/`UsageQuery` classes present on classpath **and** running as a servlet web application | Not registered with `LLMObservabilityRegistry` (it's a read-only query, not an exporter); wired as a plain Spring MVC bean serving `/meridian-argus/dashboard` and its JSON API |
@@ -295,6 +299,53 @@ histogram_quantile(0.95, sum(rate(meridian_argus_latency_seconds_bucket[5m])) by
 ## Grafana Dashboard
 
 A ready-made dashboard ships at [`docs/grafana-dashboard.json`](grafana-dashboard.json), with panels for call volume, error rate, estimated spend, p95 latency, and token throughput. Import it directly into Grafana (point it at your Prometheus data source).
+
+## OpenTelemetry Trace Export
+
+`meridian-argus-otel` exports every LLM call as an OpenTelemetry span, using the official GenAI semantic conventions (`gen_ai.*` attributes) — so it slots directly into whatever distributed tracing backend you already use (Jaeger, Tempo, Datadog APM, etc.), alongside the rest of the request's spans.
+
+### Enabling it (Spring Boot)
+
+```xml
+<dependency>
+    <groupId>com.prckjw.meridianargus</groupId>
+    <artifactId>meridian-argus-otel</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+**No extra configuration required** — as long as your application already has an `OpenTelemetry` bean (from `opentelemetry-spring-boot-starter`, `micrometer-tracing-bridge-otel`, or your own manual SDK setup), this exporter wires up automatically. `meridian-argus.metrics.otel.enabled` defaults to `true`, same as Micrometer, precisely because it doesn't do anything on its own — no `OpenTelemetry` bean means no activation, so there's nothing to turn off by default.
+
+```yaml
+meridian-argus:
+  metrics:
+    otel:
+      enabled: false   # set explicitly if you want to disable this path while keeping the dependency
+```
+
+**This module never creates or configures an OpenTelemetry SDK itself** — sampling, the OTLP export destination, resource attributes: all of that is your own SDK configuration's responsibility. `meridian-argus-otel` only adds spans to a pipeline you've already set up.
+
+### Span attributes
+
+| Attribute | Notes |
+|---|---|
+| `gen_ai.provider.name` | Provider name. `bedrock` is mapped to the registry's confirmed `aws.bedrock`; `openai` already matches the spec directly. `azure-openai`, `vertex-ai`, and `anthropic` currently pass through our own naming unchanged — **not verified against an authoritative source for their exact registry value**. If your backend does provider-specific rendering and something looks off, check the [attribute registry](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/registry/attributes/gen-ai.md) |
+| `gen_ai.operation.name` | Always `chat` |
+| `gen_ai.request.model` | Model name |
+| `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` | Token usage |
+| `error.type` | The exception type on a failed call (absent on success) |
+| `meridian_argus.cost_known` / `meridian_argus.cost_usd` | Estimated cost. `cost_usd` is **entirely omitted**, not zeroed, when the price is unknown |
+| `meridian_argus.caller_id` | Present if the provider adapter was constructed with a `callerId` |
+
+The span name is `chat <model>` (e.g. `chat gpt-4o`), and it covers the call's actual start/end time (from `LLMCallRecord`'s `startedAt` + `latency`) rather than whenever this exporter happens to run — which might lag slightly behind the real call if other interceptors are registered ahead of it on `LLMObservabilityRegistry`, but the span's own timestamps aren't affected by that.
+
+### ⚠️ The semantic conventions are still evolving
+
+OpenTelemetry's GenAI semantic conventions are currently in **Development (unstable)** status. The attribute names have already changed once — `gen_ai.system` was renamed to the current `gen_ai.provider.name` in v1.37.0 (August 2025). If the spans this module produces don't match what your backend expects, check the [GenAI semantic conventions repository](https://github.com/open-telemetry/semantic-conventions-genai) for updates before assuming this module is broken.
+
+### Explicitly out of scope
+
+This module **does not capture prompt/response text content**. The spec explicitly recommends storing that kind of content in span *events*, not attributes (events can be filtered or dropped at the collector level; attributes are always indexed and size-limited). Supporting that needs its own design pass (opt-in by default, redaction rules) rather than being bolted onto this exporter — it's tracked as a separate roadmap item.
 
 ## Local SQLite Exporter
 

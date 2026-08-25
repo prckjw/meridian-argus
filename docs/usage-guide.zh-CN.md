@@ -173,6 +173,8 @@ meridian-argus:
   metrics:
     micrometer:
       enabled: true                                # Micrometer 导出开关
+    otel:
+      enabled: true                                # OpenTelemetry 导出开关（默认开启，见下方说明）
     sqlite:
       enabled: false                                # SQLite 导出开关（默认关闭，需显式开启）
       path: meridian-argus.db                        # SQLite 数据库文件路径
@@ -193,6 +195,7 @@ meridian-argus:
 | `meridian-argus.enabled` | boolean | `true` | 总开关。设为 `false` 时，Starter 不会创建任何 Bean（包括 registry），相当于完全禁用可观测性 |
 | `meridian-argus.pricing-config-path` | string | 空（使用内置价格表） | 自定义价格表路径，支持 Spring 的 `Resource` 前缀写法：`classpath:xxx.yaml`、`file:/path/to/xxx.yaml`。不配置时使用内置的 `pricing-config/default-pricing.yaml`（打包在 `meridian-argus-core` 的 jar 里） |
 | `meridian-argus.metrics.micrometer.enabled` | boolean | `true` | 是否自动注册 `MicrometerMetricsExporter`。需要同时满足：classpath 上有 `micrometer-core` 和本项目的 `meridian-argus-metrics-micrometer` 模块、容器里存在 `MeterRegistry` Bean（通常由 `spring-boot-starter-actuator` 提供）。设为 `false` 可以在保留依赖的情况下临时关闭这一路导出，比如本地开发时不想产生指标噪音 |
+| `meridian-argus.metrics.otel.enabled` | boolean | `true` | 是否自动注册 `OpenTelemetryTraceExporter`。跟 Micrometer 一样**默认开启**——因为它本身不会主动做任何事，只有容器里真的存在 `OpenTelemetry` Bean（通常来自 `opentelemetry-spring-boot-starter` 或你自己手动配的 OTel SDK）时才会真正激活；这个模块不负责创建/配置 OTel SDK 本身，只是往已有的追踪链路上加 Span |
 | `meridian-argus.metrics.sqlite.enabled` | boolean | **`false`** | 是否自动注册 `LocalStorageExporter`。跟 Micrometer 那项不一样，**默认关闭**——写本地文件是需要主动选择的副作用，不会因为 `meridian-argus-metrics-sqlite` 恰好在 classpath 上就自动生效，必须显式设为 `true` |
 | `meridian-argus.metrics.sqlite.path` | string | `meridian-argus.db` | SQLite 数据库文件路径，相对或绝对路径均可，父目录不存在会自动创建 |
 | `meridian-argus.alerting.enabled` | boolean | **`false`** | 是否自动注册 `RollingWindowAlertEvaluator`。同样**默认关闭**——会主动往外部 Webhook 发 HTTP 请求，不应该因为模块在 classpath 上就自动生效。设为 `true` 但没配置任何 `thresholds` 会在启动时直接失败（快速失败，而不是悄悄什么都不做） |
@@ -213,6 +216,7 @@ meridian-argus:
 | `PricingConfig` | 同上 | 优先读取 `pricing-config-path`，未配置则用内置价格表 |
 | `PricingEngine` | 同上 | 包装 `PricingConfig`，提供成本计算能力 |
 | `MicrometerMetricsExporter` | `meridian-argus.enabled=true` **且** `meridian-argus.metrics.micrometer.enabled=true`（默认）**且** classpath 上有 `MeterRegistry` 和 `MicrometerMetricsExporter` 类 | 会自动 `register` 到 `LLMObservabilityRegistry` |
+| `OpenTelemetryTraceExporter` | `meridian-argus.enabled=true` **且** `meridian-argus.metrics.otel.enabled=true`（默认）**且** classpath 上有 `OpenTelemetry`/`OpenTelemetryTraceExporter` 类 **且** 容器里存在 `OpenTelemetry` Bean | 会自动 `register` 到 `LLMObservabilityRegistry`；跟 Micrometer 一样，真正决定"激不激活"的是有没有 `OpenTelemetry` Bean，而不是这个开关本身 |
 | `LocalStorageExporter` | `meridian-argus.enabled=true` **且** `meridian-argus.metrics.sqlite.enabled=true`（**默认 false，需要显式开启**）**且** classpath 上有 `LocalStorageExporter` 和 `org.sqlite.JDBC` 类 | 会自动 `register` 到 `LLMObservabilityRegistry`；应用关闭时自动调用 `close()` |
 | `RollingWindowAlertEvaluator` | `meridian-argus.enabled=true` **且** `meridian-argus.alerting.enabled=true`（**默认 false，需要显式开启**）**且** classpath 上有 `RollingWindowAlertEvaluator` 类 **且** 至少配置了一个 threshold | 会自动 `register` 到 `LLMObservabilityRegistry`；同时会自动收集容器里所有自定义的 `AlertNotifier` Bean，和配置里生成的 Slack/Teams 通知器合并使用 |
 | `DashboardController` | `meridian-argus.enabled=true` **且** `meridian-argus.dashboard.enabled=true`（**默认 false，需要显式开启**）**且** classpath 上有 `DashboardController`/`UsageQuery` 类 **且** 是 Servlet 型 Web 应用 | 不注册到 `LLMObservabilityRegistry`（这是只读查询，不是 exporter）；作为普通 Spring MVC Bean 提供 `/meridian-argus/dashboard` 页面和对应 JSON API |
@@ -296,6 +300,53 @@ histogram_quantile(0.95, sum(rate(meridian_argus_latency_seconds_bucket[5m])) by
 ## Grafana Dashboard
 
 项目自带一份现成的 Dashboard JSON：[`docs/grafana-dashboard.json`](grafana-dashboard.json)，包含调用量、错误率、预估花费、p95 延迟、Token 吞吐量五个面板，直接在 Grafana 里 Import 即可使用（需要先把 Prometheus 配置成对应的数据源）。
+
+## OpenTelemetry 链路追踪导出
+
+`meridian-argus-otel` 把每次 LLM 调用导出成一条 OpenTelemetry Span，用的是 OpenTelemetry 官方的 GenAI 语义约定（`gen_ai.*` 系列属性），可以直接接入你现有的分布式追踪体系（Jaeger、Tempo、Datadog APM 等），跟请求链路上的其他 Span 放在一起看。
+
+### 启用方式（Spring Boot）
+
+```xml
+<dependency>
+    <groupId>com.prckjw.meridianargus</groupId>
+    <artifactId>meridian-argus-otel</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+**这个模块不需要你额外配置任何东西**——只要你的应用里已经有一个 `OpenTelemetry` 类型的 Bean（不管是通过 `opentelemetry-spring-boot-starter`、`micrometer-tracing-bridge-otel`，还是你自己手动配的 SDK），这个 Exporter 就会自动接上去。跟 Micrometer 一样，`meridian-argus.metrics.otel.enabled` 默认是 `true`，因为它本身不会主动做任何事——没有 `OpenTelemetry` Bean 就不会激活，不需要你手动关掉。
+
+```yaml
+meridian-argus:
+  metrics:
+    otel:
+      enabled: false   # 如果你想临时关掉这一路导出（但保留依赖），可以显式设为 false
+```
+
+**这个模块不负责创建或配置 OpenTelemetry SDK 本身**——采样策略、导出目的地（OTLP endpoint）、Resource 属性这些都是你自己的 SDK 配置负责的事，`meridian-argus-otel` 只是往你已经搭好的追踪链路上加 Span。
+
+### 每个 Span 包含的属性
+
+| 属性 | 说明 |
+|---|---|
+| `gen_ai.provider.name` | Provider 名称。`bedrock` 会被映射成 OTel 官方文档明确给出的 `aws.bedrock`；`openai` 本身就跟规范一致；`azure-openai`、`vertex-ai`、`anthropic` 目前是直接透传我们自己的命名，**没有找到权威来源核实这三个的官方枚举值**，如果你的后端对 provider 名称做了特殊渲染逻辑，遇到显示不对的情况可以对照 [属性注册表](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/registry/attributes/gen-ai.md) 检查 |
+| `gen_ai.operation.name` | 固定为 `chat` |
+| `gen_ai.request.model` | 模型名 |
+| `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` | Token 用量 |
+| `error.type` | 调用失败时的异常类型（成功调用不会有这个属性） |
+| `meridian_argus.cost_known` / `meridian_argus.cost_usd` | 预估成本。价格未知时**完全不会设置** `cost_usd` 这个属性，而不是给一个误导性的 0 |
+| `meridian_argus.caller_id` | 如果 Provider 适配器构造时传了 `callerId`，会带出来 |
+
+Span 名称是 `chat <model>`（比如 `chat gpt-4o`），覆盖的时间范围是调用的真实起止时间（`LLMCallRecord` 里记录的 `startedAt` + `latency`），而不是这个 Exporter 实际执行的时刻——如果 `LLMObservabilityRegistry` 上还注册了其他 Exporter 排在它前面，执行时刻可能会有轻微滞后，但 Span 的时间戳不受这个影响。
+
+### ⚠️ 语义约定还在演进中
+
+OpenTelemetry 的 GenAI 语义约定目前还处于 **Development（未稳定）** 阶段，属性名之前就变过一次——`gen_ai.system` 在 2025 年 8 月的 v1.37.0 版本里被重命名成了现在的 `gen_ai.provider.name`。如果你发现产出的 Span 跟你后端预期的不一致，先去看一下 [GenAI 语义约定仓库](https://github.com/open-telemetry/semantic-conventions-genai) 有没有更新，不要默认是这个模块的 bug。
+
+### 明确不做的事
+
+这个模块**不采集 Prompt/Response 的实际文本内容**——官方规范里明确建议把这类内容放在 Span *事件*（events）里而不是属性（attributes）上（事件可以在 Collector 层面被过滤/丢弃，属性会被无条件索引且有大小限制）。要支持这个需要单独的设计（默认关闭、脱敏规则等），不适合直接塞进这个 Exporter，属于路线图里单独列出的后续项。
 
 ## 本地 SQLite Exporter
 

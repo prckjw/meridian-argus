@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.prckjw.meridianargus</groupId>
+        <artifactId>meridian-argus-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>meridian-argus-otel</artifactId>
+    <packaging>jar</packaging>
+    <name>MeridianArgus :: OpenTelemetry</name>
+    <description>
+        Exports every LLMCallRecord as an OpenTelemetry span using the
+        (experimental, still-evolving) GenAI semantic conventions. Depends
+        only on opentelemetry-api, not the SDK: the consuming application
+        brings its own OpenTelemetry SDK configuration (OTLP endpoint,
+        sampler, resource attributes, etc.) and this module just creates
+        spans against whatever Tracer that setup provides, the same "bring
+        your own backend" shape as meridian-argus-metrics-micrometer using
+        an existing MeterRegistry rather than creating one.
+    </description>
+
+    <properties>
+        <!-- Pinned explicitly (not delegated to the Spring Boot BOM, which
+             doesn't manage this artifact): bump when a newer stable
+             release is available. Verify against
+             https://github.com/open-telemetry/opentelemetry-java/releases
+             before bumping; this project's build environment has no
+             network access to check for itself. -->
+        <opentelemetry.version>1.64.0</opentelemetry.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.prckjw.meridianargus</groupId>
+            <artifactId>meridian-argus-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+            <version>${opentelemetry.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- In-memory SDK implementation + InMemorySpanExporter, used
+                 only in tests to assert on the spans this module actually
+                 produces: never a compile-scope dependency of main code,
+                 which only ever touches the API. -->
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+            <version>${opentelemetry.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-testing</artifactId>
+            <version>${opentelemetry.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

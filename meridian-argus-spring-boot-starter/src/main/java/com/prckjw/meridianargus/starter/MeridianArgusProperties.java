@@ -17,6 +17,8 @@ import java.util.List;
  *   metrics:
  *     micrometer:
  *       enabled: true
+ *     otel:
+ *       enabled: true
  *     sqlite:
  *       enabled: false
  *       path: meridian-argus.db
@@ -81,6 +83,7 @@ public class MeridianArgusProperties {
     public static class Metrics {
         private final Micrometer micrometer = new Micrometer();
         private final Sqlite sqlite = new Sqlite();
+        private final Otel otel = new Otel();
 
         public Micrometer getMicrometer() {
             return micrometer;
@@ -90,7 +93,32 @@ public class MeridianArgusProperties {
             return sqlite;
         }
 
+        public Otel getOtel() {
+            return otel;
+        }
+
         public static class Micrometer {
+            private boolean enabled = true;
+
+            public boolean isEnabled() {
+                return enabled;
+            }
+
+            public void setEnabled(boolean enabled) {
+                this.enabled = enabled;
+            }
+        }
+
+        public static class Otel {
+            /**
+             * Defaults to true, same reasoning as Micrometer: this doesn't
+             * make any network call or write anything on its own — it
+             * only adds spans to an {@code OpenTelemetry} SDK the
+             * application has already configured for its own purposes.
+             * Requires that bean to be present regardless (see
+             * {@code MeridianArgusOtelAutoConfiguration}); if it's absent,
+             * nothing activates whether this is true or false.
+             */
             private boolean enabled = true;
 
             public boolean isEnabled() {

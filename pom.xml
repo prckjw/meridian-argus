@@ -47,6 +47,7 @@
         <module>meridian-argus-metrics-sqlite</module>
         <module>meridian-argus-alerting</module>
         <module>meridian-argus-web-dashboard</module>
+        <module>meridian-argus-otel</module>
         <module>meridian-argus-spring-boot-starter</module>
         <module>meridian-argus-examples/spring-boot-openai-demo</module>
     </modules>
@@ -130,6 +131,12 @@
             <dependency>
                 <groupId>com.prckjw.meridianargus</groupId>
                 <artifactId>meridian-argus-web-dashboard</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-otel</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

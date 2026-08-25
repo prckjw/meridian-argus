@@ -12,8 +12,10 @@ import java.lang.annotation.Target;
  * bean, the pricing engine loaded from the bundled or user-supplied pricing
  * table, and — depending on which optional modules and properties are
  * present — a {@code MicrometerMetricsExporter} wired to the application's
- * {@code MeterRegistry}, a {@code LocalStorageExporter} writing to a local
- * SQLite file (opt-in via {@code meridian-argus.metrics.sqlite.enabled=true}),
+ * {@code MeterRegistry}, an {@code OpenTelemetryTraceExporter} wired to an
+ * existing {@code OpenTelemetry} bean (enabled by default, activates only
+ * if that bean is present), a {@code LocalStorageExporter} writing to a
+ * local SQLite file (opt-in via {@code meridian-argus.metrics.sqlite.enabled=true}),
  * a {@code RollingWindowAlertEvaluator} with Slack/Teams webhook notifiers
  * (opt-in via {@code meridian-argus.alerting.enabled=true}), and/or a
  * read-only web dashboard at {@code /meridian-argus/dashboard} (opt-in via
@@ -22,6 +24,7 @@ import java.lang.annotation.Target;
  * This annotation is a convenience marker on top of Spring Boot's regular
  * auto-configuration mechanism ({@code MeridianArgusAutoConfiguration},
  * {@code MeridianArgusMicrometerAutoConfiguration},
+ * {@code MeridianArgusOtelAutoConfiguration},
  * {@code MeridianArgusSqliteAutoConfiguration},
  * {@code MeridianArgusAlertingAutoConfiguration}, and
  * {@code MeridianArgusDashboardAutoConfiguration} are also registered
@@ -47,6 +50,7 @@ import java.lang.annotation.Target;
 @Import({
         MeridianArgusAutoConfiguration.class,
         MeridianArgusMicrometerAutoConfiguration.class,
+        MeridianArgusOtelAutoConfiguration.class,
         MeridianArgusSqliteAutoConfiguration.class,
         MeridianArgusAlertingAutoConfiguration.class,
         MeridianArgusDashboardAutoConfiguration.class
