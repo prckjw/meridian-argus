@@ -1,108 +1,70 @@
-# 下一轮迭代计划
+# 下一轮迭代计划（第三轮）
 
-本文档记录 MeridianArgus 下一轮迭代（建议按 2 周为一个周期）的具体范围，区别于 [`architecture.md`](architecture.md) 里更长线的整体路线图——那份文档回答"这个项目最终要长成什么样"，这份文档回答"接下来两周具体做什么"。
-
----
-
-## 本轮进展（第二轮）
-
-- ✅ `meridian-argus-bom` 已加入（用户只需导入 BOM，无需逐个写版本号；与根 `dependencyManagement` 重复，新增模块时需同一次提交里同时更新）
-- ✅ `scripts/verify-structure.sh`：离线结构检查（XML 注释 `--`、可疑 import、模块 pom 存在性、剔除 Spring Boot BOM 后的 reactor 校验），已接入 CI
-- ✅ `MeridianArgusAllExportersIntegrationTest`：五个可选模块同时开启的集成测试（4 个拦截器 + Dashboard 控制器）
-- ⏳ P0 仍是阻塞项：真实 `mvn -B verify`（需要在有 Maven Central 访问的环境运行）、Sonatype/GPG、Codecov token
-- ⏳ 待办：`docs/release-readiness.md`；Prompt/Response 采集需先做设计讨论
+前两轮计划已归档到 [`archive/`](archive/)。本文档只回答一个问题：接下来两周具体做什么。更长线的路线图见 [`architecture.md`](architecture.md)。
 
 ---
 
 ## 上一轮的收尾情况
 
-- ✅ 五个 Provider 适配器（OpenAI / Azure OpenAI / Bedrock / Vertex AI / Anthropic）全部落地，各自有单元测试
-- ✅ Micrometer 导出器可选依赖装配的 bug 已修复（`MeridianArgusMicrometerAutoConfiguration` 独立拆分）
-- ✅ Demo 模块补了端到端冒烟测试
-- ⚠️ **还没有人在真实网络环境下跑通过一次完整的 `mvn -B verify`**——这是本轮迭代必须清零的技术债，优先级最高
+- ✅ `meridian-argus-bom`、`scripts/verify-structure.sh`（已接入 CI，**CI 上结构检查通过**）
+- ✅ 五个可选模块同时开启的集成测试（已写，未验证）
+- ❌ **CI 的 `Build and test` 步骤失败**（push 到 `34a21f9` 后 23 秒即失败；历史上每次 CI 都是红的）。这是代码第一次被真实编译，所以不意外，但必须先清零
+- ⚠️ Codecov 上传同样失败（预期内：还没配置 `CODECOV_TOKEN`）
 
 ---
 
-## P0：先决条件（本轮迭代开始前必须做完）
+## P0：阻塞项，其他一切都排在它后面
 
-### 1. 跑通一次真实的 `mvn -B verify`
-这个仓库里所有代码目前都是"静态审查通过但从未真机编译"的状态（开发环境没有 Maven Central 访问权限）。在动手做任何新功能之前，先确认：
+### 1. 让 `mvn -B verify` 变绿
+沙箱拿不到 Actions 日志（403），也访问不了 Maven Central，所以需要你把失败日志给我：
 
 ```bash
-git clone https://github.com/prckjw/meridian-argus.git
-cd meridian-argus
-mvn -B verify
+gh run view <run-id> --log-failed          # 或在 GitHub Actions 页面复制 Build and test 步骤的报错
+# 或本地：
+mvn -B verify 2>&1 | tail -150
 ```
 
-如果有编译错误或测试失败，作为迭代的第一个任务修掉，再谈别的。**这是阻塞项，不是可选项**——继续在一个从没编译过的代码库上叠加新功能，风险会越滚越大。
+我按报错逐个修，每修一批就推一次，直到 CI 全绿。**验收：main 上最新一次 CI 为绿色。**
+
+### 2. CI 小修
+- `actions/setup-java@v4` 已弃用 → 升到 v5；`checkout`、`upload-artifact`、`codecov-action` 的 Node 20 警告同理，统一升级
+- Codecov 步骤在没有 token 时不应让整个 job 变红：加 `fail_ci_if_error: false`，或在无 token 时跳过
 
 ---
 
-## P1：本轮迭代范围（高价值、成本可控）
+## P1：P0 变绿之后
 
-### 2. 发布第一个真实版本到 Maven Central（或至少 GitHub Packages）
-现在项目只有 `0.1.0-SNAPSHOT`，任何人想用都得 `git clone` + 本地 `mvn install`，这跟"发布一个开源 SDK"的目标还有距离。
+### 3. 发布 `0.1.0`
+- Sonatype Central Publisher 账号 + GPG 密钥（需要你操作），在仓库 Secrets 里配置
+- 跑通 `release.yml`；若 Central 一时搞不定，先发 GitHub Packages，让 README 的 `<dependency>` 真的能用
+- 发布前核对：`<developers>`、`<scm>`、`<licenses>`、Javadoc/sources jar、BOM 也要一起发布
 
-- 最小目标：把 `0.1.0` 正式发布到 Maven Central（`release.yml` 这个 workflow 已经搭好了骨架，需要配置 Sonatype 账号 + GPG 签名密钥）
-- 如果 Maven Central 的审核/签名流程一时搞不定，退而求其次先发到 GitHub Packages，让 README 里的安装说明是真的能直接 `<dependency>` 引用，而不是只能源码构建
+### 4. 写 `docs/release-readiness.md`
+发布前检查清单：版本号策略（SNAPSHOT → 0.1.0）、变更日志、`CHANGELOG.md`、BOM 与根 `dependencyManagement` 同步、发布后冒烟（新建空项目只引 BOM + starter 能跑起来）。
 
-### 3. 补 CI 的代码覆盖率报告 —— ✅ 已完成
-目前测试覆盖率是靠人工数文件、数行数评估的，没有量化指标。建议：
-- ✅ 根 `pom.xml` 加了 `jacoco-maven-plugin`（放在 `<build><plugins>` 而不只是 `pluginManagement`，这样所有子模块自动继承执行，不用每个模块单独开）
-- ✅ CI 里 `mvn -B verify` 跑完后，用 `codecov-action` 把所有模块的 `jacoco.xml` 合并上传（Codecov 自己支持多文件合并，不需要额外搭一个聚合模块）
-- ✅ README 中英文都加了徽章
-- ⚠️ **需要人工操作**：徽章目前指向的是标准 Codecov URL 格式，要仓库 owner 去 [codecov.io](https://codecov.io) 用 GitHub 账号登录、找到这个仓库启用一次，并在 GitHub 仓库的 Secrets 里加一个 `CODECOV_TOKEN`，徽章才会显示真实数字（在这之前会显示"unknown"）
-
-### 4. 本地 SQLite Exporter（`docs/architecture.md` 里 v0.2 遗留项）—— ✅ 已完成
-
-不是所有团队都跑 Prometheus，很多小团队/个人项目更想要一个"零依赖、开箱即用"的存储方案。
-
-- ✅ 新建 `meridian-argus-metrics-sqlite` 模块，用 SQLite（`org.xerial:sqlite-jdbc`，无需额外服务）落盘每条 `LLMCallRecord` + 计价结果
-- ✅ 提供了 `UsageQuery` 查询辅助类（按 provider/model 分组的用量与花费、总花费、调用数），不需要用户自己写 SQL
-- ✅ Spring Boot Starter 里补了 `MeridianArgusSqliteAutoConfiguration`，严格照搬 Micrometer 那次 bug 修复的模式（独立 `@AutoConfiguration` 类 + 字符串形式 `@ConditionalOnClass`），默认关闭，需要显式 `meridian-argus.metrics.sqlite.enabled=true` 才会装配
-- ✅ 中英文使用说明都补了对应章节
-
-这个功能补完之后，"不跑 Prometheus 也能用"这个故事就完整了，也是路线图里明确写着要做的下一项。
+### 5. BOM 同步校验
+BOM 与根 `dependencyManagement` 是手工双写。在 `verify-structure.sh` 里加第 5 项：比较两处的 artifactId 集合，不一致就失败，新增模块漏改一处时 CI 直接报警。
 
 ---
 
-## P2：视 P1 完成情况决定是否本轮启动
+## P2：可选
 
-### 5. 告警评估器 + Webhook 通知（`AlertThreshold` 落地）—— ✅ 已完成
-`AlertThreshold` 这个数据类已经存在但完全没被使用（这次迭代刚给它补了基础测试）。真正有价值的是接上：
-- ✅ 新建 `meridian-argus-alerting` 模块，`RollingWindowAlertEvaluator` 用纯内存滑动窗口实现，支持同时配置多条独立阈值
-- ✅ `SlackWebhookNotifier`/`TeamsWebhookNotifier`，用 JDK 内置 `HttpClient`，没有额外引入 HTTP 库依赖；Teams 那边特意核实了微软这两年把旧版 Connector 下线、改成 Workflows + Adaptive Card 的变化，按新格式实现
-- ✅ 只在状态跳变（触发/恢复）时通知一次，避免持续超支期间被同一个告警刷屏
-- ✅ Spring Boot Starter 集成，支持用户自定义 `AlertNotifier` Bean 自动汇入，跟配置生成的 Slack/Teams 通知器合并使用
-- ✅ 中英文使用说明都补了完整章节
+- **Javadoc 站点**：用 GitHub Pages 发布，README 里加链接
+- **端到端示例**：demo 模块里加一个同时开 SQLite + Dashboard + 告警的 profile，作为文档里的"全功能"参考
+- **Micrometer/OTel 属性名核对**：OTel GenAI 语义约定里目前只验证过 `bedrock → aws.bedrock`，其余服务商名称是直接透传的，逐个对照规范核实
 
-### 6. 项目元数据小修 —— ✅ 已完成
-- ✅ `artifactId` 从 `meridian-argus-example-spring-boot-openai-demo` 改成 `meridian-argus-examples-spring-boot-openai-demo`，跟文件夹名 `meridian-argus-examples`（复数）保持一致
-- ✅ 根 `pom.xml` 里 `<developers>`、`<scm>` 这两个 Maven Central 发布必需的字段之前丢失了（不确定是哪次改动漏掉的），已经补回去；`<url>`、`<licenses>` 本来就在
+## P3：往后放
+
+- **Prompt/Response 内容采集**：涉及脱敏与合规，必须先做设计讨论（默认关闭、脱敏规则如何配置、是否落盘），不要仓促上马
 
 ---
 
-## P3：明确往后放（本轮不做，但记录在案避免遗忘）
+## 验收标准
 
-- ~~**Web Dashboard**（`meridian-argus-web-dashboard`）：工作量较大（前端 + 后端都要），且 Grafana Dashboard 已经能覆盖大部分可视化需求，优先级往后放~~ ✅ 已完成——用零依赖的单文件静态 HTML + 原生 JS 实现（不引入 npm/webpack 构建链），后端读取 `meridian-argus-metrics-sqlite` 写入的同一个 SQLite 文件，只读、不写入。依赖上特意选了 `spring-webmvc` 而不是 `spring-boot-starter-webmvc`，避免给宿主应用重复带一个内嵌服务器
-- ~~**OpenTelemetry 导出**：等 Micrometer 路径稳定跑一段时间、收集到真实反馈后再做，避免同时维护两套导出机制~~ ✅ 已完成——这项是在你明确要求"直接开工"之后提前做的，没有真的等到 Micrometer 路径收集完反馈。好在两套导出机制（`meridian-argus-metrics-micrometer` 和 `meridian-argus-otel`）可以同时启用、互不冲突，所以提前做也不影响 Micrometer 那条路径本身。属性用的是 `meridian-argus.metrics.otel.enabled`（跟 micrometer/sqlite 同级），默认 `true`（因为它本身不产生任何副作用，只有真的存在 `OpenTelemetry` Bean 时才会激活）
-- **Prompt/Response 内容采集**：涉及数据脱敏、合规，需要更谨慎的设计讨论（比如默认关闭、脱敏规则怎么配置），不适合仓促上马
+- [ ] main 上 CI 绿色（编译、测试、结构检查全部通过）
+- [ ] `0.1.0` 发布到 Maven Central 或 GitHub Packages
+- [ ] 空项目只引 BOM + starter 即可启动（发布后冒烟）
+- [ ] BOM 同步校验进入 CI
+- [ ] 中英文文档同步
 
----
-
-## 建议的验收标准（Definition of Done）
-
-本轮迭代结束时，希望能做到：
-
-- [ ] `mvn -B verify` 在全新 clone 的仓库上一次跑通，无编译错误、无测试失败 —— **仍未完成，需要你本地验证**（开发环境访问不了 Maven Central）
-- [ ] Maven Central（或 GitHub Packages）上能搜到 `com.prckjw.meridianargus:meridian-argus-spring-boot-starter:0.1.0` —— **仍未完成，需要真实 Sonatype 账号 + GPG 签名密钥**
-- [x] CI 输出覆盖率报告，README 有徽章
-- [x] SQLite Exporter 有对应的模块、测试，以及 `usage-guide.md`/`usage-guide.zh-CN.md` 里的使用说明
-- [x] 中英文文档保持同步更新
-- [x]（追加完成，原计划外）告警评估器 + Webhook 通知落地
-
-**当前状态**：P1/P2 里所有能靠写代码完成的项都做完了。剩下的两项（P0 编译验证、Maven Central 发布）都需要人工操作——前者需要你在有 Maven Central 网络访问权限的环境里跑一次 `mvn -B verify` 并把结果反馈给我；后者需要你去注册 Sonatype/Central Publisher 账号、生成 GPG 签名密钥，这些我没法替你完成。
-
----
-
-如果人手/时间有限，最低限度也要完成 **P0（跑通编译）** —— 在这之前做的任何新功能都建立在一个未经验证的地基上。
+**需要你做的：** 把 CI 失败日志发给我（P0）；之后注册 Sonatype、生成 GPG 密钥、配置 `CODECOV_TOKEN`（P1）。
