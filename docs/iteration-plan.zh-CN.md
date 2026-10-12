@@ -4,6 +4,16 @@
 
 ---
 
+## 本轮进展（第二轮）
+
+- ✅ `meridian-argus-bom` 已加入（用户只需导入 BOM，无需逐个写版本号；与根 `dependencyManagement` 重复，新增模块时需同一次提交里同时更新）
+- ✅ `scripts/verify-structure.sh`：离线结构检查（XML 注释 `--`、可疑 import、模块 pom 存在性、剔除 Spring Boot BOM 后的 reactor 校验），已接入 CI
+- ✅ `MeridianArgusAllExportersIntegrationTest`：五个可选模块同时开启的集成测试（4 个拦截器 + Dashboard 控制器）
+- ⏳ P0 仍是阻塞项：真实 `mvn -B verify`（需要在有 Maven Central 访问的环境运行）、Sonatype/GPG、Codecov token
+- ⏳ 待办：`docs/release-readiness.md`；Prompt/Response 采集需先做设计讨论
+
+---
+
 ## 上一轮的收尾情况
 
 - ✅ 五个 Provider 适配器（OpenAI / Azure OpenAI / Bedrock / Vertex AI / Anthropic）全部落地，各自有单元测试
