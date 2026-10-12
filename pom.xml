@@ -48,6 +48,7 @@
         <module>meridian-argus-alerting</module>
         <module>meridian-argus-web-dashboard</module>
         <module>meridian-argus-otel</module>
+        <module>meridian-argus-bom</module>
         <module>meridian-argus-spring-boot-starter</module>
         <module>meridian-argus-examples/spring-boot-openai-demo</module>
     </modules>

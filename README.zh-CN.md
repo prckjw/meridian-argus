@@ -28,19 +28,31 @@ MeridianArgus 补的就是这一块空白：一个与具体服务商无关的轻
 
 ## 快速开始
 
-引入 Starter 和你需要的服务商适配器：
+先导入 BOM，再引入 Starter 和你需要的服务商适配器（无需逐个写版本号）：
 
 ```xml
-<dependency>
-    <groupId>com.prckjw.meridianargus</groupId>
-    <artifactId>meridian-argus-spring-boot-starter</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-</dependency>
-<dependency>
-    <groupId>com.prckjw.meridianargus</groupId>
-    <artifactId>meridian-argus-provider-openai</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-</dependency>
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>com.prckjw.meridianargus</groupId>
+            <artifactId>meridian-argus-bom</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>com.prckjw.meridianargus</groupId>
+        <artifactId>meridian-argus-spring-boot-starter</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.prckjw.meridianargus</groupId>
+        <artifactId>meridian-argus-provider-openai</artifactId>
+    </dependency>
+</dependencies>
 ```
 
 把你已有的调用包一层：
@@ -118,6 +130,7 @@ PricingEngine   MicrometerMetricsExporter   （你自己的 exporter）
 | `meridian-argus-alerting` | 滚动窗口成本阈值评估，附带 Slack 和 Microsoft Teams 的 Webhook 通知器 |
 | `meridian-argus-web-dashboard` | 可选的只读 Dashboard（零依赖静态 HTML 页面 + JSON API），数据来源是 SQLite 数据库 |
 | `meridian-argus-otel` | 用 OpenTelemetry GenAI 语义约定，把每次调用导出成一条 Span，接入应用已有的链路追踪体系 |
+| `meridian-argus-bom` | 版本对齐用的 BOM |
 | `meridian-argus-spring-boot-starter` | 自动装配，把上述所有组件接成 Spring Bean |
 | `meridian-argus-examples/*` | 可直接运行的示例应用 |
 

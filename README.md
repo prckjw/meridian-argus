@@ -28,19 +28,31 @@ MeridianArgus is that missing piece: a small, provider-agnostic core plus thin a
 
 ## Quick start
 
-Add the starter and the provider adapter(s) you need:
+Import the BOM once, then add the starter and the provider adapter(s) you need (no per-module versions):
 
 ```xml
-<dependency>
-    <groupId>com.prckjw.meridianargus</groupId>
-    <artifactId>meridian-argus-spring-boot-starter</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-</dependency>
-<dependency>
-    <groupId>com.prckjw.meridianargus</groupId>
-    <artifactId>meridian-argus-provider-openai</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-</dependency>
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>com.prckjw.meridianargus</groupId>
+            <artifactId>meridian-argus-bom</artifactId>
+            <version>0.1.0-SNAPSHOT</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>com.prckjw.meridianargus</groupId>
+        <artifactId>meridian-argus-spring-boot-starter</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.prckjw.meridianargus</groupId>
+        <artifactId>meridian-argus-provider-openai</artifactId>
+    </dependency>
+</dependencies>
 ```
 
 Wrap the call you're already making:
@@ -118,6 +130,7 @@ All five have matching entries in [`pricing-config/default-pricing.yaml`](pricin
 | `meridian-argus-alerting` | Rolling-window cost threshold evaluation, with Slack and Microsoft Teams webhook notifiers |
 | `meridian-argus-web-dashboard` | Optional read-only dashboard (dependency-free static HTML page + JSON API) reading from the SQLite database |
 | `meridian-argus-otel` | Exports each call as an OpenTelemetry span using the GenAI semantic conventions, alongside whatever tracing pipeline the application already has configured |
+| `meridian-argus-bom` | Bill of materials aligning all module versions |
 | `meridian-argus-spring-boot-starter` | Auto-configuration wiring everything above into Spring beans |
 | `meridian-argus-examples/*` | Runnable demo apps |
 

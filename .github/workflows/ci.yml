@@ -20,6 +20,9 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Verify project structure
+        run: bash scripts/verify-structure.sh
+
       - name: Build and test
         run: mvn -B verify
 

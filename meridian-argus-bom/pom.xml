@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.prckjw.meridianargus</groupId>
+        <artifactId>meridian-argus-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>meridian-argus-bom</artifactId>
+    <packaging>pom</packaging>
+    <name>MeridianArgus BOM</name>
+    <description>Bill of materials: import it to align all MeridianArgus module versions. Intentionally duplicates the root dependencyManagement; update both in the same commit when adding a module.</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-provider-openai</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-provider-azure-openai</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-provider-bedrock</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-provider-vertex</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-provider-anthropic</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-metrics-micrometer</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-metrics-sqlite</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-alerting</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-web-dashboard</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-otel</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.prckjw.meridianargus</groupId>
+                <artifactId>meridian-argus-spring-boot-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
