@@ -53,10 +53,10 @@ public final class PricingConfig {
                 String modelName = modelEntry.getKey();
                 Map<String, Object> priceFields = (Map<String, Object>) modelEntry.getValue();
 
-                BigDecimal input = toBigDecimal(priceFields.get("input"));
-                BigDecimal output = toBigDecimal(priceFields.get("output"));
+                BigDecimal inputPrice = toBigDecimal(priceFields.get("input"));
+                BigDecimal outputPrice = toBigDecimal(priceFields.get("output"));
 
-                result.put(ProviderModel.of(providerName, modelName), new PriceEntry(input, output));
+                result.put(ProviderModel.of(providerName, modelName), new PriceEntry(inputPrice, outputPrice));
             }
         }
 
