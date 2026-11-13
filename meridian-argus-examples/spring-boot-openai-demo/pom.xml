@@ -55,6 +55,14 @@
             <artifactId>spring-boot-resttestclient</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <!-- Test-only: spring-boot-resttestclient's auto-configuration
+                 needs RestTemplateBuilder, which Boot 4 moved into this
+                 module. -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-restclient</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
