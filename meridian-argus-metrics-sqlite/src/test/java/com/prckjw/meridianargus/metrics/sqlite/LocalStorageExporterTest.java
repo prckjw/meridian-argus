@@ -101,7 +101,8 @@ class LocalStorageExporterTest {
             assertEquals(1, rs.getInt("success"));
             assertEquals("checkout-service", rs.getString("caller_id"));
             assertEquals(1, rs.getInt("price_known"));
-            assertEquals("0.0075", rs.getString("total_cost_usd"));
+            // Compare numerically: the stored text keeps the pricing engine's scale (0.00750000).
+            assertEquals(0, new java.math.BigDecimal("0.0075").compareTo(new java.math.BigDecimal(rs.getString("total_cost_usd"))));
             assertTrue(!rs.next(), "expected exactly one row");
         }
     }
