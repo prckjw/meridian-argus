@@ -11,7 +11,22 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
-@AutoConfiguration(after = MeridianArgusAutoConfiguration.class)
+// @ConditionalOnBean(MeterRegistry) is only meaningful if Boot's own metrics
+// auto-configurations have already created the registry, so order after them.
+// afterName (strings) is used so a name that doesn't exist in the running
+// Boot version is simply ignored.
+@AutoConfiguration(
+        after = MeridianArgusAutoConfiguration.class,
+        afterName = {
+                // Spring Boot 4 (modularised)
+                "org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration",
+                "org.springframework.boot.micrometer.metrics.autoconfigure.CompositeMeterRegistryAutoConfiguration",
+                "org.springframework.boot.micrometer.metrics.autoconfigure.export.prometheus.PrometheusMetricsExportAutoConfiguration",
+                // Spring Boot 3.x
+                "org.springframework.boot.actuate.autoconfigure.metrics.MetricsAutoConfiguration",
+                "org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration",
+                "org.springframework.boot.actuate.autoconfigure.metrics.export.prometheus.PrometheusMetricsExportAutoConfiguration"
+        })
 @ConditionalOnClass(name = {
         "com.prckjw.meridianargus.metrics.micrometer.MicrometerMetricsExporter",
         "io.micrometer.core.instrument.MeterRegistry"
