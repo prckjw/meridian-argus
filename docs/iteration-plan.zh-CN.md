@@ -8,14 +8,14 @@
 
 - ✅ `meridian-argus-bom`、`scripts/verify-structure.sh`（已接入 CI，**CI 上结构检查通过**）
 - ✅ 五个可选模块同时开启的集成测试（已写，未验证）
-- ❌ **CI 的 `Build and test` 步骤失败**（push 到 `34a21f9` 后 23 秒即失败；历史上每次 CI 都是红的）。这是代码第一次被真实编译，所以不意外，但必须先清零
+- ✅ **CI 已全绿**（`c59dda5`，`mvn -B verify` 在 GitHub Actions 上通过）。修掉的问题：`PricingConfig` 局部变量与参数重名（编译错误）、SQLite 测试的 BigDecimal 精度比较、starter 测试缺 Servlet API、demo 缺 `spring-boot-restclient`（Boot 4 模块拆分）、缺 `-parameters` 编译选项、Micrometer 自动配置未排在 Boot 指标配置之后（**这是一个真实的功能缺陷：用户的 Micrometer 导出器此前不会被装配**）。原状态：`Build and test` 步骤失败（push 到 `34a21f9` 后 23 秒即失败；历史上每次 CI 都是红的）。这是代码第一次被真实编译，所以不意外，但必须先清零
 - ⚠️ Codecov 上传同样失败（预期内：还没配置 `CODECOV_TOKEN`）
 
 ---
 
 ## P0：阻塞项，其他一切都排在它后面
 
-### 1. 让 `mvn -B verify` 变绿
+### 1. 让 `mvn -B verify` 变绿 —— ✅ 已完成
 沙箱拿不到 Actions 日志（403），也访问不了 Maven Central，所以需要你把失败日志给我：
 
 ```bash
