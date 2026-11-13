@@ -76,5 +76,13 @@
             <version>1.64.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <!-- Test-only: WebApplicationContextRunner needs the Servlet API,
+                 which the optional web-dashboard dependency does not bring
+                 (the host application supplies its own server). -->
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
