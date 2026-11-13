@@ -56,6 +56,9 @@
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
+        <!-- Keep parameter names: this parent is not spring-boot-starter-parent, so
+             Spring MVC would otherwise fail to resolve @RequestParam names. -->
+        <maven.compiler.parameters>true</maven.compiler.parameters>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <spring-boot.version>4.1.0</spring-boot.version>

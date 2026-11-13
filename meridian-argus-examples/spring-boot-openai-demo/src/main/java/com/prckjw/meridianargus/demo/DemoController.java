@@ -25,7 +25,7 @@ public class DemoController {
     }
 
     @GetMapping("/ask")
-    public String ask(@RequestParam(defaultValue = "Tell me something interesting.") String prompt) {
+    public String ask(@RequestParam(name = "prompt", defaultValue = "Tell me something interesting.") String prompt) {
         FakeChatCompletionResponse response = wrapper.call(
                 () -> simulateOpenAICall(prompt),
                 r -> TokenUsage.of(r.promptTokens(), r.completionTokens())
